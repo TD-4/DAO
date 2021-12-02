@@ -1,3 +1,7 @@
+desktop.ini
+.idea
+saved
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
