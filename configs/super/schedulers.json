@@ -1,0 +1,121 @@
+{
+    "name": "test",
+    "type": "cls",
+    "seed": 0,
+
+    "envs": {
+        "type": "linux",
+        "gpus": {
+            "dist_backend": "nccl",
+            "dist_url": null,
+            "devices": 1,
+            "num_machines": 1,
+            "machine_rank": 0
+        }
+    },
+    "trainer": {
+        "type": "trainerCls",
+        "log": {
+            "log_dir": "/root/code/DAO/saved",
+            "log_per_iter": 10,
+            "eval_interval": 1
+        },
+
+        "warmup_epochs": 5,
+        "no_aug_epochs": 5,
+        "max_epochs": 200,
+
+        "ckpt": null,
+        "resume": false,
+
+        "amp": true,
+        "occupy": false,
+        "ema": true
+    },
+    "model": {
+        "type": "EfficientNet",
+        "summary_size": [1,224,224],
+        "kwargs": {
+            "model_name": "Efficientnet-b0",
+            "weights_path": "/root/code/DAO/pretrained/efficientnet-b0-355c32eb.pth",
+            "in_channels": 1,
+            "num_classes": 38
+        }
+    },
+    "optimizer": {
+        "type": "sgd_warmup_bias_bn_weight",
+        "kwargs": {
+            "lr": 0.01,
+            "weight_decay": 1e-4,
+            "momentum": 0.9,
+            "warmup_lr": 0
+        }
+    },
+    "dataloader": {
+        "type": "CTXTD",
+        "dataset": {
+            "kwargs": {
+                "data_dir": "/root/data/ai_datasets/screen",
+                "image_set": "trainlist.txt",
+                "in_channels": 1,
+                "input_size": [224, 224],
+                "cache": false,
+                "train_ratio": 0.9,
+                "shuffle": true,
+                "sample_range": [2000, 3000],
+                "images_suffix": [".bmp"]
+            }
+        },
+        "transforms": {
+            "kwargs": {
+                "histogram": {"p": 1},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+            }
+        },
+        "num_workers": 4,
+        "batch_size": 256
+    },
+    "loss": {
+        "type": "CrossEntropyLoss2d",
+        "kwargs": {
+            "ignore_index": 255,
+            "weight": [
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1],
+            "reduction": "mean"
+        }
+    },
+    "lr_scheduler": {
+        "type": "warmcos",
+        "kwargs": {
+            "warmup_epochs": 5,
+            "warmup_lr_start": 0
+        }
+    },
+    "evaluator": {
+        "type": "CTXT",
+        "dataset": {
+            "kwargs": {
+                "data_dir": "/root/data/ai_datasets/trainval",
+                "image_set": "vallist.txt",
+                "in_channels": 1,
+                "input_size": [224, 224],
+                "cache": false
+            }
+
+        },
+        "transforms": {
+            "kwargs": {
+                "histogram": {"p": 1},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+            }
+
+        },
+        "kwargs": {
+            "num_workers": 4,
+            "batch_size": 256
+        }
+    }
+}

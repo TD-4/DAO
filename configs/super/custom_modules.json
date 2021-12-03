@@ -1,0 +1,6 @@
+{
+    "custom_modules": [
+        "/root/code/DAO/custom_modules/model_mine.py",
+        "/root/code/DAO/custom_modules/model_mine2.py"
+    ]
+}
