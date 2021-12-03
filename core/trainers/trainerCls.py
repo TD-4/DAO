@@ -13,8 +13,10 @@ from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 
 from core.modules import Registers
-from core.utils import get_rank, allreduce_norm, get_local_rank, get_world_size, get_local_size
-from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA
+from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
+from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel
+from core.modules.utils import Meter_Cls, plot_confusion_matrix
+from core.trainers.utils import gpu_mem_usage
 
 
 class ClsTrainer:
@@ -124,6 +126,7 @@ class ClsTrainer:
             **self.exp.evaluator.kwargs
         )
         self.best_acc = 0
+        self.train_metrics = Meter_Cls(self.exp.model.kwargs.num_classes)
         logger.info("Now Training Start ......")
 
     def _before_epoch(self):
@@ -133,26 +136,19 @@ class ClsTrainer:
         """
         logger.info("---> start train epoch{}".format(self.epoch + 1))
 
-        if self.epoch + 1 == self.max_epoch - self.exp.trainer.no_aug_epochs or self.no_aug:
-            logger.info("--->close augments !")
-            logger.info("--->save model weight per 1 epoch !")
-            self.exp.cfg_dot.trainer.log.eval_interval = 1
-            if not self.no_aug:
-                self._save_ckpt(ckpt_name="last_no_aug_epoch")
-
     def _before_iter(self):
         pass
 
     def _train_one_iter(self):
         iter_start_time = time.time()
 
-        inps, targets, path = self.prefetcher.next()
+        inps, targets, path = self.train_loader.next()
         inps = inps.to(self.data_type)
         # targets = targets.to(self.data_type)
         targets.requires_grad = False
         data_end_time = time.time()
 
-        with torch.cuda.amp.autocast(enabled=self.trainer.amp):    # 开启auto cast的context manager语义（model+loss）
+        with torch.cuda.amp.autocast(enabled=self.exp.trainer.amp):    # 开启auto cast的context manager语义（model+loss）
             outputs = self.model(inps)
             loss = self.loss(outputs, targets)
 
@@ -172,7 +168,7 @@ class ClsTrainer:
             param_group["lr"] = lr
 
         iter_end_time = time.time()
-        self.meter.update(
+        self.train_metrics.update(
             data_time=data_end_time - iter_start_time,
             batch_time=iter_end_time - iter_start_time,
             total_loss=loss.item(),
@@ -188,16 +184,16 @@ class ClsTrainer:
             * reset setting of resize
         """
         # log needed information
-        if (self.iter + 1) % self.exp.cfg_dot.trainer.log.log_per_iter == 0 and get_rank()==0:
+        if (self.iter + 1) % self.exp.trainer.log.log_per_iter == 0 and get_rank() == 0:
             # TODO check ETA logic
             left_iters = self.max_iter * self.max_epoch - (self.progress_in_iter + 1)
-            eta_seconds = (self.meter.batch_time.avg + self.meter.data_time.avg) * left_iters
+            eta_seconds = (self.train_metrics.batch_time.avg + self.train_metrics.data_time.avg) * left_iters
             eta_str = "ETA: {}".format(datetime.timedelta(seconds=int(eta_seconds)))
 
             progress_str = f"epoch: {self.epoch + 1}/{self.max_epoch}, iter: {self.iter + 1}/{self.max_iter} "
-            loss_str = "loss:{:2f}".format(self.meter.total_loss.avg)
-            time_str = "iter time:{:2f}, data time:{:2f}".format(self.meter.batch_time.avg, self.meter.data_time.avg)
-            topk_str = "top1:{:4f}, top2:{:4f}".format(self.meter.precision_top1.avg, self.meter.precision_top2.avg)
+            loss_str = "loss:{:2f}".format(self.train_metrics.total_loss.avg)
+            time_str = "iter time:{:2f}, data time:{:2f}".format(self.train_metrics.batch_time.avg, self.train_metrics.data_time.avg)
+            topk_str = "top1:{:4f}, top2:{:4f}".format(self.train_metrics.precision_top1.avg, self.train_metrics.precision_top2.avg)
 
             logger.info(
                 "{}, {}, mem: {:.0f}Mb, {}, {}, lr: {:.3e}, ETA:{}".format(
@@ -206,20 +202,20 @@ class ClsTrainer:
                     gpu_mem_usage(),
                     time_str,
                     loss_str,
-                    self.meter.lr,
+                    self.train_metrics.lr,
                     eta_str
                 )
             )
-            self.tblogger.add_scalar('train/loss', self.meter.total_loss.avg, self.progress_in_iter)
-            self.tblogger.add_scalar('train/lr', self.meter.lr, self.progress_in_iter)
-            self.tblogger.add_scalar('train/top1', self.meter.precision_top1.avg, self.progress_in_iter)
-            self.tblogger.add_scalar('train/top2', self.meter.precision_top2.avg, self.progress_in_iter)
-            self.meter.initialized(False)
+            self.tblogger.add_scalar('train/loss', self.train_metrics.total_loss.avg, self.progress_in_iter)
+            self.tblogger.add_scalar('train/lr', self.train_metrics.lr, self.progress_in_iter)
+            self.tblogger.add_scalar('train/top1', self.train_metrics.precision_top1.avg, self.progress_in_iter)
+            self.tblogger.add_scalar('train/top2', self.train_metrics.precision_top2.avg, self.progress_in_iter)
+            self.train_metrics.initialized(False)
 
     def _after_epoch(self):
         self._save_ckpt(ckpt_name="latest")
 
-        if (self.epoch + 1) % self.exp.cfg_dot.trainer.log.eval_interval == 0:
+        if (self.epoch + 1) % self.exp.trainer.log.eval_interval == 0:
             all_reduce_norm(self.model)
             self._evaluate_and_save_model()
 
@@ -236,18 +232,18 @@ class ClsTrainer:
             if is_parallel(evalmodel):
                 evalmodel = evalmodel.module
 
-        top1, top2, confusion_matrix = self.exp.eval(evalmodel, self.evaluator, get_world_size() > 1,
-                                                     device="cuda:{}".format(get_local_rank()))
+        top1, top2, confusion_matrix = self.evaluator.evaluate(evalmodel, get_world_size() > 1,
+                                                               device="cuda:{}".format(get_local_rank()))
         self.model.train()
-        if get_rank() == 0:
+        if get_rank() == 0 and top1 > self.best_acc:
             self.tblogger.add_scalar("val/top1", top1, self.epoch + 1)
             self.tblogger.add_scalar("val/top2", top2, self.epoch + 1)
-            label_txt = os.path.join(self.exp.cfg_dot.evaluator.dataset.kwargs.data_dir,
+            label_txt = os.path.join(self.exp.evaluator.dataset.kwargs.data_dir,
                                      "labels.txt")
             class_names = []
             with open(label_txt, "r") as labels_file:
                 for label in labels_file.readlines():
-                    class_names.append(label.strip().split()[1])
+                    class_names.append(label.strip().split()[0])
             self.tblogger.add_figure('val/confusion matrix',
                                      figure=plot_confusion_matrix(confusion_matrix,
                                                                   classes=class_names,
@@ -263,7 +259,7 @@ class ClsTrainer:
     def _save_ckpt(self, ckpt_name, update_best_ckpt=False):
         if get_rank() == 0:
             save_model = self.ema_model.ema if self.use_model_ema else self.model
-            logger.info("Save weights to {}".format(self.exp.output_dir))
+            logger.info("Save weights to {}".format(self.output_dir))
             ckpt_state = {
                 "start_epoch": self.epoch + 1,
                 "model": save_model.state_dict(),
@@ -272,7 +268,7 @@ class ClsTrainer:
             save_checkpoint(
                 ckpt_state,
                 update_best_ckpt,
-                self.exp.output_dir,
+                self.output_dir,
                 ckpt_name,
             )
 
