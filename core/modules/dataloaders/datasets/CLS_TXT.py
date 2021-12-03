@@ -62,9 +62,9 @@ class CLS_TXT(Dataset):
             self._gen_label_txt(data_dir)
             self._gen_trainvallist(data_dir, train_ratio=train_ratio, shuffle=shuffle, suffix=images_suffix,
                                    sample_range=sample_range)
-
+        else:
+            self._get_label_dict(data_dir, separator=separator)
         self._set_ids(separator=separator)  # 获取所有文件的路径和标签，存放到files中
-
         self.imgs = None
         if cache:
             self._cache_images()
@@ -189,6 +189,12 @@ class CLS_TXT(Dataset):
             for i, folder in enumerate(all_folder):
                 labels_file.write("{}:{}\n".format(folder, i))
                 self.labels_dict[folder] = i
+
+    def _get_label_dict(self, data_dir, separator=":"):
+        label_txt = os.path.join(data_dir, "labels.txt")
+        with open(label_txt, "r") as labels_file:
+            for name_id in labels_file.readlines():
+                self.labels_dict[name_id.strip().split(separator)[0]] = name_id.strip().split(separator)[1]
 
     def _gen_trainvallist(self, data_dir, train_ratio=0.9, shuffle=True, suffix=None, sample_range=(2000, 3000)):
         suffix = [".bmp"] if shuffle is None else suffix
