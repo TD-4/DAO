@@ -90,4 +90,5 @@ def CLS_TXT_Evaluator(
     }
     dataloader_kwargs["batch_size"] = batch_size
     val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
-    return DataPrefetcherCls(val_loader), len(val_loader)
+    return val_loader, len(val_loader)
+    # return DataPrefetcherCls(val_loader), len(val_loader)
