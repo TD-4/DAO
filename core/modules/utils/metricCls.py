@@ -5,8 +5,10 @@
 
 import numpy as np
 import torch
+import itertools
+import matplotlib.pyplot as plt
 
-__all__ = ['Meter_Cls']
+__all__ = ['Meter_Cls', 'plot_confusion_matrix']
 
 
 class AverageMeter(object):
@@ -100,3 +102,39 @@ class Meter_Cls(object):
             self.total_loss = False
             self.precision_top1.initialized = False
             self.precision_top2.initialized = False
+
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues,
+                          num_classes=38,
+                          dst_path=None):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    cm = np.asarray(cm)
+    length = 10 if num_classes<10 else num_classes//2
+    fig = plt.figure(dpi=100, figsize=(length, length))
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    return fig
