@@ -13,7 +13,9 @@ from core.tools import register_modules, TrainVal
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("AI TrainVal Parser")
-    parser.add_argument("-c", "--exp_file", default="/root/code/DAO/configs/cls_trainval.json", type=str,
+    parser.add_argument("-c", "--exp_file",
+                        default="/root/code/DAO/configs/cls-EfficientNet-sgd_warmup_bias_bn_weight-CLS_TXTD-CrossEntropyLoss-warm_cos_lr-CLS_TXT_Evaluator-trainval-linux.json",
+                        type=str,
                         help="please input your experiment description file")
     parser.add_argument("-m", "--cus_file", default="/root/code/DAO/configs/super/custom_modules.json", type=str,
                         help="please input your experiment description file")
