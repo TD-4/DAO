@@ -63,3 +63,31 @@ def CLS_TXTD(
     torch.multiprocessing.set_sharing_strategy('file_system')
     train_loader = DataPrefetcherCls(train_loader)
     return train_loader, max_iter
+
+
+@Registers.dataloaders.register
+def CLS_TXT_Evaluator(
+        is_distributed=False,
+        batch_size=None,
+        num_workers=None,
+        dataset=None,
+        **kwargs
+):
+    valdataset = Registers.datasets.get(dataset.type)(
+        preproc=get_transformer(dataset.transforms.kwargs),
+        **dataset.kwargs
+    )
+    if is_distributed:
+        batch_size = batch_size // get_world_size()
+        sampler = torch.utils.data.distributed.DistributedSampler(valdataset, shuffle=False)
+    else:
+        sampler = torch.utils.data.SequentialSampler(valdataset)
+
+    dataloader_kwargs = {
+        "num_workers": num_workers,
+        "pin_memory": True,
+        "sampler": sampler,
+    }
+    dataloader_kwargs["batch_size"] = batch_size
+    val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
+    return DataPrefetcherCls(val_loader), len(val_loader)
