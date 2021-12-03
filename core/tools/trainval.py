@@ -12,9 +12,10 @@ import torch.backends.cudnn as cudnn
 
 from core.utils import configure_nccl, configure_omp, get_num_devices
 from core.trainers import launch, ClsTrainer
+from core.tools import register_modules
 
 
-def TrainVal(config=None):
+def TrainVal(config=None, custom_modules=None):
     exp = DotMap(config)
 
     # get env info
@@ -27,11 +28,11 @@ def TrainVal(config=None):
 
     cache = exp.train_loader.dataset.kwargs.cache
 
-    launch(main, num_gpu, num_machines, machine_rank, backend=dist_backend, dist_url=dist_url, cache=cache, args=(exp,))
+    launch(main, num_gpu, num_machines, machine_rank, backend=dist_backend, dist_url=dist_url, cache=cache, args=(exp, custom_modules))
 
 
 @logger.catch
-def main(exp):
+def main(exp, custom_modules):
     if exp.seed != 0:
         random.seed(exp.seed)
         torch.manual_seed(exp.seed)
@@ -46,6 +47,8 @@ def main(exp):
     configure_nccl()
     configure_omp()
     cudnn.benchmark = True
+
+    register_modules(custom_modules=custom_modules)   # 注册所有组件
 
     if exp.type == "cls":
         trainer = ClsTrainer(exp)

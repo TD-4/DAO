@@ -8,7 +8,7 @@ import json
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # 添加 core库 到 sys.path 中
-from core.tools import register_modules, TrainVal
+from core.tools import TrainVal
 
 
 if __name__ == "__main__":
@@ -23,5 +23,4 @@ if __name__ == "__main__":
     exp = json.load(open(parser.parse_args().exp_file))
     custom_modules = json.load(open(parser.parse_args().cus_file))
 
-    register_modules(custom_modules=custom_modules)   # 注册所有组件
-    TrainVal(config=exp)
+    TrainVal(config=exp, custom_modules=custom_modules)
