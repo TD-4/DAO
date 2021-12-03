@@ -75,14 +75,26 @@ class Registers:
     dataloaders = Register("dataloaders")   # 数据加载器
     losses = Register("losses")             # 损失函数
     schedulers = Register("schedulers")     # 学习调整策略
+    evaluators = Register("evaluators")     # 验证器
 
 
-BACKBONES = ["EfficientNet"]
+BACKBONES = ["EfficientNet"]    # 写到py文件或者包的位置即可
 CLS_MODELS = ["EfficientNet"]
-TRAINERS = ["trainerCls"]
+OPTIMS = ["sgd_warmup_bias_bn_weight"]
+DATASETS = ["CLS_TXT"]
+DATALOADERS = ["CLS_TXTD"]
+LOSSES = ["CrossEntropyLoss"]
+SCHEDULERS = ["cos_lr", "multistep_lr", "warm_cos_lr", "yolox_warm_cos", "yolox_semi_warm_cos_lr"]
+EVALUATORS = ["CLS_TXT_Evaluator"]
 ALL_MODULES = [
     ("core.modules.models.backbone", BACKBONES),
     ("core.modules.models.cls", CLS_MODELS),
+    ("core.modules.optims", OPTIMS),
+    ("core.modules.dataloaders.datasets", DATASETS),
+    ("core.modules.dataloaders", DATALOADERS),
+    ("core.modules.losses", LOSSES),
+    ("core.modules.schedulers", SCHEDULERS),
+    ("core.modules.evaluators", EVALUATORS),
 ]
 
 
