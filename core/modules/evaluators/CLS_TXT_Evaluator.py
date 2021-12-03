@@ -28,7 +28,7 @@ class CLS_TXT_Evaluator:
             num_classes=None,
             **kwargs
     ):
-        self.val_dataloader, self.iters_per_epoch = Registers.dataloaders.get(type_)(
+        self.dataloader, self.iters_per_epoch = Registers.dataloaders.get(type_)(
             is_distributed=is_distributed,
             dataset=dataset,
             **kwargs
@@ -70,6 +70,14 @@ class CLS_TXT_Evaluator:
                 for pred, target in data_:  # 每个gpu所具有的sample
                     output_s.append(pred)
                     target_s.append(target)
+        else:
+            output_s = []
+            target_s = []
+            tmp = []
+            data_list = data_list
+            for data_ in data_list:
+                output_s.append(data_[0])
+                target_s.append(data_[1])
         if not is_main_process():
             top1, top2, confu_ma = 0, 0, None
         else:
