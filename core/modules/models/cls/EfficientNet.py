@@ -5,7 +5,7 @@
 __all__ = ['EfficientNet']
 
 
-from core.modules.models.backbone import EfficientNet as torchEfficientNet
+from core.modules.models.backbone.EfficientNet import EfficientNet as torchEfficientNet
 from core.modules.register import Registers
 
 
