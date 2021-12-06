@@ -7,14 +7,16 @@ import argparse
 import json
 import os
 import sys
+from loguru import logger
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # 添加 core库 到 sys.path 中
-from core.tools import TrainVal
+from core.tools import TrainVal, Eval, Demo, Export
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("AI TrainVal Parser")
     parser.add_argument("-c", "--exp_file",
-                        default="/root/code/DAO/configs/cls-EfficientNet-sgd_warmup_bias_bn_weight-CLS_TXTD-CrossEntropyLoss-warm_cos_lr-CLS_TXT_Evaluator-trainval-linux.json",
+                        default="/root/code/DAO/configs/cls-EfficientNet-sgd_warmup_bias_bn_weight-CLS_TXTD-CrossEntropyLoss-warm_cos_lr-CLS_TXT_Evaluator-demo-linux.json",
                         type=str,
                         help="please input your experiment description file")
     parser.add_argument("-m", "--cus_file", default="/root/code/DAO/configs/super/custom_modules.json", type=str,
@@ -23,4 +25,15 @@ if __name__ == "__main__":
     exp = json.load(open(parser.parse_args().exp_file))
     custom_modules = json.load(open(parser.parse_args().cus_file))
 
-    TrainVal(config=exp, custom_modules=custom_modules)
+    if parser.parse_args().exp_file[:-5].split('-')[-2] == "trainval":
+        TrainVal(config=exp, custom_modules=custom_modules)
+    elif parser.parse_args().exp_file[:-5].split('-')[-2] == "eval":
+        Eval(config=exp, custom_modules=custom_modules)
+    elif parser.parse_args().exp_file[:-5].split('-')[-2] == "demo":
+        Demo(config=exp, custom_modules=custom_modules)
+    elif parser.parse_args().exp_file[:-5].split('-')[-2] == "export":
+        Export(config=exp, custom_modules=custom_modules)
+    else:
+        logger.error("this type {} is not supported, now supported trainval, eval, demo, export".format(
+            parser.parse_args().exp_file[:-5].split('-')[-2])
+        )
