@@ -5,6 +5,8 @@
 import os
 import time
 import datetime
+import numpy as np
+from PIL import Image
 from loguru import logger
 
 import torch
@@ -17,6 +19,7 @@ from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm
 from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel
 from core.modules.utils import Meter_Cls, plot_confusion_matrix
 from core.trainers.utils import gpu_mem_usage
+from core.modules.dataloaders.augments import get_transformer
 
 
 class ClsTrainer:
@@ -307,3 +310,92 @@ class ClsTrainer:
     @property
     def progress_in_iter(self):
         return self.epoch * self.max_iter + self.iter
+
+
+class ClsEval:
+    def __init__(self, exp):
+        self.exp = exp  # DotMap 格式 的配置文件
+        self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
+
+    def eval(self):
+        pass
+
+
+class ClsDemo:
+    def __init__(self, exp):
+        self.exp = exp  # DotMap 格式 的配置文件
+        self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
+
+        self.model = self._get_model()
+        self.images = self._get_images()  # ndarray
+
+    def _get_model(self):
+        logger.info("model setting, on cpu")
+        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        logger.info("\n{}".format(model))  # log model structure
+        summary(model, input_size=tuple(self.exp.model.summary_size),
+                device="{}".format(next(model.parameters()).device))  # log torchsummary model
+        ckpt = torch.load(self.exp.model.ckpt, map_location="cpu")["model"]
+        model = load_ckpt(model, ckpt)
+        model.eval()
+        return model
+
+    def _img_ok(self, img_p):
+        flag = False
+        for m in self.exp.images.image_ext:
+            if img_p.endswith(m):
+                flag = True
+        return flag
+
+    def _get_images(self):
+        results = []
+        all_paths = []
+
+        if self.exp.images.type == "image":
+            all_paths.append(self.exp.images.path)
+        elif self.exp.images.type == "images":
+            all_p = [p for p in os.listdir(self.exp.images.path) if self._img_ok(p)]
+            for p in all_p:
+                all_paths.append(os.path.join(self.exp.images.path, p))
+
+        for img_p in all_paths:
+            image = np.array(Image.open(img_p))  # h,w
+            if len(image.shape) == 2:
+                image = np.expand_dims(image, axis=2)  # h,w,1
+            transform = get_transformer(self.exp.images.transforms.kwargs)
+            image = transform(image=image)['image']
+            image = image.transpose(2, 0, 1)  # c, h, w
+            results.append(image)
+        return results
+
+    def demo(self):
+        results = []
+        for image in self.images:
+            image = torch.tensor(image).unsqueeze(0)  # 1, c, h, w
+            output = self.model(image)
+            top1_id = output.squeeze().cpu().detach().numpy().argmax()
+            top1_scores = np.exp(output.cpu().detach().numpy().squeeze().max()) / sum(
+                                                               np.exp(output.cpu().detach().numpy().squeeze()))
+            logger.info("pred:{}, and scores:{:4f}".format(top1_id, top1_scores))
+            results.append((top1_id, top1_scores))
+        return results
+
+
+class ClsExport:
+    def __init__(self, exp):
+        self.exp = exp  # DotMap 格式 的配置文件
+        self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
+
+    @logger.catch
+    def export(self):
+        pass
+        # model_path = self.config.onnx.model_path
+        #     onnx_path = os.path.join(self.output_dir, "model.onnx")
+        #     self.model.eval()
+        #     self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+        #     size = self.config.onnx.args.pop('size')
+        #     torch.onnx.export(self.model,
+        #                       torch.randn(size).to(self.device),
+        #                       onnx_path,
+        #                       **self.config.onnx.args)
+
