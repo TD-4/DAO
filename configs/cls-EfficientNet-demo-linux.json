@@ -1,0 +1,28 @@
+{
+    "name": "test",
+    "type": "cls",
+
+    "model": {
+        "type": "EfficientNet",
+        "summary_size": [1,224,224],
+        "kwargs": {
+            "model_name": "Efficientnet-b0",
+            "weights_path": "/root/code/DAO/pretrained/efficientnet-b0-355c32eb.pth",
+            "in_channels": 1,
+            "num_classes": 38
+        },
+        "ckpt": "/root/code/DAO/saved/test/12-06_09-43/best_ckpt.pth"
+    },
+    "images": {
+        "type": "images",
+        "image_ext": [".jpg", ".jpeg", ".bmp", ".png"],
+        "path": "/root/data/ai_datasets/test",
+        "transforms": {
+            "kwargs": {
+                "Resize":{"p": 1, "height":224, "width":224},
+                "histogram": {"p": 1},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+            }
+        }
+    }
+}
