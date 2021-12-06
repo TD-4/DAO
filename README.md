@@ -1,12 +1,10 @@
 # AI+工业
 
-[TOC]
-
 ## 1. 项目由来
 
 在**工业流程**中，深度学习应用过程包括：
 
-- Train/Val(针对特定场景，特定数据集训练一个模型)
+- TrainVal(针对特定场景，特定数据集训练一个模型)
 - Eval(使用测试集测试，得到工业上的性能指标)
 - Demo(将模型做个demo给客户展示)
 - Export(将模型转成其他格式)
@@ -36,146 +34,129 @@
 
 
 
-目前，我所遇到的深度学习项目基本都能用这两个维度概括，为了方便以后使用，在此将两个维度整理成这个项目，将**工业流程（train、eval、demo、export、deploy的调用API）**封装到tools库中，将**深度学习训练(train & eval核心过程)**封装到core中，将**界面UI部分**分装成app包。
+目前，我所遇到的深度学习项目基本都能用这两个维度概括，为了方便以后使用，在此将两个维度整理成这个项目，将**工业流程（train、eval、demo、export、deploy的调用API）**封装到tools库中，将**深度学习训练(train & eval核心过程)**封装到core中。
 
 ## 2. 目录结构
 
 ### 2.1 项目结构
 
 ```tree
-AI/
-├── app
-│   └── __init__.py
-├── configs
-│   ├── det_yolox_coco_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json
-│   ├── det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json
-│   └── README.md
-├── core
-│   ├── dataloaders
-│   │   ├── detection
-│   │   │   ├── data_augment.py
-│   │   │   ├── dataloading.py
-│   │   │   ├── data_prefetcher.py
-│   │   │   ├── datasets
-│   │   │   │   ├── coco_classes.py
-│   │   │   │   ├── coco.py
-│   │   │   │   ├── datasets_wrapper.py
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── mosaicdetection.py
-│   │   │   │   ├── voc_classes.py
-│   │   │   │   └── voc.py
-│   │   │   ├── __init__.py
-│   │   │   └── samplers.py
-│   │   ├── __init__.py
-│   ├── evaluators
-│   │   ├── detection
-│   │   │   ├── coco_evaluator.py
-│   │   │   ├── __init__.py
-│   │   │   ├── voc_eval.py
-│   │   │   └── voc_evaluator.py
-│   │   ├── __init__.py
-│   ├── experiments(实验配置包)
-│   │   ├── base_exp.py:所有实验的基类
-│   │   ├── build.py:通过configs.json生成Exp
-│   │   ├── __init__.py
-│   │   └── yolox.py:Yolox模型Exp, 实验中所需要的dataloader,model,...等都从此类中获取
+root@c98fb50f30a8:~/code/DAO# tree
+.
+├── configs # 配置文件
+│   ├── ...
+│   ├── cls-EfficientNet-sgd_warmup_bias_bn_weight-CLS_TXTD-CrossEntropyLoss-warm_cos_lr-CLS_TXT_Evaluator-trainval-linux.json
+│   └── super
+│       ├── custom_modules.json
+│       ├── dataloaders.json
+│       ├── evaluators.json
+│       ├── losses.json
+│       ├── models.json
+│       ├── optims.json
+│       └── schedulers.json
+├── core	# 核心库
 │   ├── __init__.py
-│   ├── losses
-│   │   ├── CrossEntropyLoss2d.py
-│   │   └── __init__.py
-│   ├── models
-│   │   ├── backbone
-│   │   │   ├── efficientnet_pytorch
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── model.py
-│   │   │   │   └── utils.py
-│   │   │   └── __init__.py
-│   │   ├── classification
-│   │   │   ├── EfficientNet.py
-│   │   │   └── __init__.py
-│   │   ├── detection
+│   ├── modules	# 模块组件
+│   │   ├── __init__.py
+│   │   ├── dataloaders	# 数据加载组件
+│   │   │   ├── CLS_TXTD.py
 │   │   │   ├── __init__.py
-│   │   │   └── yolox
-│   │   │       ├── darknet.py
-│   │   │       ├── __init__.py
-│   │   │       ├── losses.py
-│   │   │       ├── network_blocks.py
-│   │   │       ├── yolo_fpn.py
-│   │   │       ├── yolo_head.py
-│   │   │       ├── yolo_pafpn.py
-│   │   │       └── yolox.py
+│   │   │   ├── augments
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── custom
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   └── histogram.py
+│   │   │   │   └── data_augment.py
+│   │   │   ├── data_prefetcher.py
+│   │   │   ├── dataloading.py
+│   │   │   ├── datasets
+│   │   │   │   ├── CLS_TXT.py
+│   │   │   │   └── __init__.py
+│   │   │   └── samplers.py
+│   │   ├── evaluators	# 验证器组件
+│   │   │   ├── CLS_TXT_Evaluator.py
+│   │   │   └── __init__.py
+│   │   ├── losses	# 损失函数组件
+│   │   │   ├── CrossEntropyLoss.py
+│   │   │   └── __init__.py
+│   │   ├── models	# 模型组件
+│   │   │   ├── __init__.py
+│   │   │   ├── backbone
+│   │   │   │   ├── EfficientNet
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── model.py
+│   │   │   │   │   └── utils.py
+│   │   │   │   └── __init__.py
+│   │   │   └── cls
+│   │   │       ├── EfficientNet.py
+│   │   │       └── __init__.py
+│   │   ├── optims	# 优化器组件
+│   │   │   ├── __init__.py
+│   │   │   └── sgd_warmup_bias_bn_weight.py
+│   │   ├── register.py	# 所有模型注册器
+│   │   ├── schedulers	# lr调整策略组件
+│   │   │   ├── __init__.py
+│   │   │   ├── cos_lr.py
+│   │   │   ├── multistep_lr.py
+│   │   │   ├── warm_cos_lr.py
+│   │   │   ├── yolox_semi_warm_cos_lr.py
+│   │   │   └── yolox_warm_cos.py
+│   │   └── utils	# 工具
+│   │       ├── __init__.py
+│   │       └── metricCls.py
+│   ├── tools	# train、evaluate、demo、export过程
 │   │   ├── __init__.py
-│   │   └── segmentation
-│   │       └── __init__.py
-│   ├── optims
+│   │   ├── demo.py
+│   │   ├── eval.py
+│   │   ├── export.py
+│   │   ├── trainval.py
+│   │   └── utils
+│   │       ├── __init__.py
+│   │       └── register_modules.py
+│   ├── trainers	# trainval核心部分
 │   │   ├── __init__.py
-│   ├── schedulers
+│   │   ├── launch.py
+│   │   ├── trainerCls.py
+│   │   └── utils
+│   │       ├── __init__.py
+│   │       ├── checkpoint.py
+│   │       ├── ema.py
+│   │       ├── logger.py
+│   │       └── metrics.py
+│   ├── utils # 工具
 │   │   ├── __init__.py
-│   │   ├── lr_scheduler.py
-│   ├── trainers
-│   │   ├── __init__.py
-│   │   ├── launch.py: 所有试验的启动文件
-│   │   ├── trainerCls.py: 分类的trainer过程
-│   │   ├── trainerDet.py: 目标检测的trainer过程
-│   │   └── trainerSeg.py: 分割的trainer过程
-│   ├── utils
-│   │   ├── allreduce_norm.py: 多卡同步操作
-│   │   ├── boxes.py
-│   │   ├── checkpoint.py
-│   │   ├── dist.py:multi-gpu communication.
-│   │   ├── ema.py
-│   │   ├── __init__.py
-│   │   ├── logger.py: 日志设置（重定向，存储等操作）
-│   │   ├── metricDet.py
-│   │   ├── model_utils.py
-│   │   ├── setup_env.py: 环境变量设置，cv2多线程读图，nccl环境配置，...
-│   │   └── visualize.py
+│   │   ├── allreduce_norm.py
+│   │   ├── dist.py
+│   │   └── setup_env.py
 │   └── version.py
-├── datasets
-|   ├── COCO
-|   | 	└── annotations
-|   |   ├── test2017
-|   |   ├── train2017
-|   |   └── val2017
-|   └── VOCdevkit/
-|   |   ├── VOC2007
-|   |   │   ├── Annotations
-|   |   │   ├── ImageSets
-|   |   │   │   ├── Layout
-|   |   │   │   ├── Main
-|   |   │   │   └── Segmentation
-|   |   │   ├── JPEGImages
-|   |   │   ├── SegmentationClass
-|   |   │   └── SegmentationObject
-|   |   └── VOC2012
-|   |       ├── Annotations
-|   |       ├── ImageSets
-|   |       │   ├── Action
-|   |       │   ├── Layout
-|   |       │   ├── Main
-|   |       │   └── Segmentation
-|   |       ├── JPEGImages
-|   |       ├── SegmentationClass
-|   |       └── SegmentationObject
-└── tools
-|   ├── demo
-|   │   ├── demo.py
-|   ├── eval
-|   │   └── eval.py
-|   ├── __init__.py
-|   └── trainval
-|       └── trainval.py:训练接口
+├── custom_modules	# 自定义模块组件存放位置
+│   ├── model_mine.py
+│   └── model_mine2.py
+├── desktop.ini
+├── main.py
+├── pretrained	# 预训练模型
+│   └── efficientnet-b0-355c32eb.pth
+├── requirements.txt
+├── saved	# 结果存放位置
+│   └── test
+│       ├── 12-03_17-46
+│       │   ├── best_ckpt.pth
+│       │   ├── events.out.tfevents.1638524781.c98fb50f30a8.1183700.0
+│       │   ├── last_epoch_ckpt.pth
+│       │   ├── latest_ckpt.pth
+│       │   └── train_log.txt
+│       └── 12-06_09-43
+│           ├── best_ckpt.pth
+│           ├── events.out.tfevents.1638755035.c98fb50f30a8.1192675.0
+│           ├── last_epoch_ckpt.pth
+│           ├── latest_ckpt.pth
+│           └── train_log.txt
 ├── LICENSE
 ├── README.md
-├── requirements.txt
-├── saved
 ├── setup.cfg
 └── setup.py
-
 ```
 ### 2.2 trainerX.py代码过程
-
-`训练过程中，所需要的信息和内容，都从Exp(eg. yolox文件)中获得`
 
 ```
 |- trainerX
@@ -219,6 +200,10 @@ AI/
 ```
 
 ## 3. 如何使用
+
+### 3.1 分类（classification）
+
+
 
 ### 3.1 Detection 
 
