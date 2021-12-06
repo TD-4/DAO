@@ -1,0 +1,33 @@
+{
+    "name": "test",
+    "type": "cls",
+
+    "model": {
+        "type": "EfficientNet",
+        "summary_size": [1,224,224],
+        "kwargs": {
+            "model_name": "Efficientnet-b0",
+            "weights_path": "/root/code/DAO/pretrained/efficientnet-b0-355c32eb.pth",
+            "in_channels": 1,
+            "num_classes": 38
+        },
+        "ckpt": "/root/code/DAO/saved/test/12-06_09-43/best_ckpt.pth"
+    },
+    "onnx": {
+        "type": "",
+        "x_size": [1, 1, 224, 224],
+        "onnx_path": "/root/code/DAO/saved/test/t2.onnx",
+        "kwargs": {
+            "export_params": true,
+            "opset_version": 10,
+            "do_constant_folding": true,
+            "verbose":true,
+            "input_names": ["input"],
+            "output_names": ["output"],
+            "dynamic_axes": {
+                "input": {"0": "batch_size"},
+                "output":{"0": "batch_size"}
+            }
+        }
+    }
+}

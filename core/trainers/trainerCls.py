@@ -385,17 +385,25 @@ class ClsExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
+        self.model = self._get_model()
+
+    def _get_model(self):
+        logger.info("model setting, on cpu")
+        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        logger.info("\n{}".format(model))  # log model structure
+        summary(model, input_size=tuple(self.exp.model.summary_size),
+                device="{}".format(next(model.parameters()).device))  # log torchsummary model
+        ckpt = torch.load(self.exp.model.ckpt, map_location="cpu")["model"]
+        model = load_ckpt(model, ckpt)
+        model.eval()
+        return model
 
     @logger.catch
     def export(self):
-        pass
-        # model_path = self.config.onnx.model_path
-        #     onnx_path = os.path.join(self.output_dir, "model.onnx")
-        #     self.model.eval()
-        #     self.model.load_state_dict(torch.load(model_path, map_location=self.device))
-        #     size = self.config.onnx.args.pop('size')
-        #     torch.onnx.export(self.model,
-        #                       torch.randn(size).to(self.device),
-        #                       onnx_path,
-        #                       **self.config.onnx.args)
+        x = torch.randn(self.exp.onnx.x_size)
+        onnx_path = self.exp.onnx.onnx_path
+        torch.onnx.export(self.model,
+                          x,
+                          onnx_path,
+                          **self.exp.onnx.kwargs)
 
