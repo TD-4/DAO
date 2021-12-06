@@ -156,7 +156,13 @@ root@c98fb50f30a8:~/code/DAO# tree
 ├── setup.cfg
 └── setup.py
 ```
-### 2.2 trainerX.py代码过程
+### 2.2 调用流程
+
+![](resources/main.png)
+
+### 2.3 trainerX.py代码过程
+
+#### 2.3.1 TrainVal过程
 
 ```
 |- trainerX
