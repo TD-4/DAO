@@ -7,3 +7,6 @@
 from .utils import register_modules
 
 from .trainval import TrainVal
+from .eval import Eval
+from .demo import Demo
+from .export import Export
