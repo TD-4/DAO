@@ -52,9 +52,9 @@
         }
     },
     "dataloader": {
-        "type": "CLS_TXTD",
+        "type": "ClsDataloaderTrain",
         "dataset": {
-            "type": "CLS_TXT",
+            "type": "ClsDataset",
             "kwargs": {
                 "data_dir": "/root/data/ai_datasets/screen",
                 "image_set": "trainlist.txt",
@@ -98,9 +98,9 @@
         }
     },
     "evaluator": {
-        "type": "CLS_TXT_Evaluator",
+        "type": "ClsEvaluator",
         "dataset": {
-            "type": "CLS_TXT",
+            "type": "ClsDataset",
             "kwargs": {
                 "data_dir": "/root/data/ai_datasets/screen",
                 "image_set": "vallist.txt",

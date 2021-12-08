@@ -1,156 +1,54 @@
-# #!/usr/bin/env python3
-# # -*- coding:utf-8 -*-
-# # Copyright (c) Megvii, Inc. and its affiliates.
-#
-# import argparse
-# import os
-# import sys
-# import random
-# import warnings
-# from loguru import logger
-#
-# import torch
-# import torch.backends.cudnn as cudnn
-# from torch.nn.parallel import DistributedDataParallel as DDP
-#
-# # 添加core包路径到环境变量中
-# root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# sys.path.append(os.path.join(root_path))
-# from core.trainers import launch
-# from core.experiments import get_exp
-# from core.utils import configure_nccl, fuse_model, get_local_rank, get_model_info, setup_logger
-#
-#
-# def make_parser():
-#     parser = argparse.ArgumentParser("AI Eval")
-#
-#     # configs.json 文件路径, eg. configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json
-#     parser.add_argument("-f", "--exp_file", default=None, type=str, help="pls input your expriment description file",    )
-#
-#     # distributed
-#     parser.add_argument("--dist-backend", default="nccl", type=str, help="distributed backend")
-#     parser.add_argument("--dist-url", default=None, type=str, help="url used to set up distributed training",    )
-#     parser.add_argument("-b", "--batch-size", type=int, default=64, help="batch size")
-#     parser.add_argument("-d", "--devices", default=None, type=int, help="device for training")
-#     parser.add_argument("--num_machines", default=1, type=int, help="num of node for training")
-#     parser.add_argument("--machine_rank", default=0, type=int, help="node rank for multi-node training")
-#
-#     parser.add_argument("-c", "--ckpt", default=None, type=str, help="ckpt for eval")
-#     parser.add_argument("--conf", default=None, type=float, help="test conf")
-#     parser.add_argument("--nms", default=None, type=float, help="test nms threshold")
-#     parser.add_argument("--tsize", default=None, type=int, help="test img size")
-#
-#     parser.add_argument("--fp16", dest="fp16", default=False, action="store_true",
-#                         help="Adopting mix precision evaluating.",    )
-#     parser.add_argument("--fuse", dest="fuse", default=False, action="store_true",
-#                         help="Fuse conv and bn for testing.",)
-#     parser.add_argument("--trt", dest="trt", default=False, action="store_true",
-#                         help="Using TensorRT model for testing.",)
-#     parser.add_argument("--legacy", dest="legacy", default=False, action="store_true",
-#                         help="To be compatible with older versions",)
-#     parser.add_argument("--test", dest="test", default=False, action="store_true",
-#                         help="Evaluating on test-dev set.",)
-#     parser.add_argument("--speed", dest="speed", default=False, action="store_true",
-#                         help="speed test only.",)
-#
-#     return parser
-#
-#
-# @logger.catch
-# def main(exp, args, num_gpu):
-#     if exp.cfg.seed != 0:
-#         random.seed(exp.cfg.seed)
-#         torch.manual_seed(exp.cfg.seed)
-#         cudnn.deterministic = True
-#         warnings.warn(
-#             "You have chosen to seed testing. This will turn on the CUDNN deterministic setting, "
-#         )
-#
-#     is_distributed = num_gpu > 1
-#
-#     # set environment variables for distributed training
-#     configure_nccl()
-#     cudnn.benchmark = True
-#
-#     rank = get_local_rank()
-#
-#     file_name = os.path.join(exp.output_dir)
-#
-#     if rank == 0:
-#         os.makedirs(file_name, exist_ok=True)
-#
-#     setup_logger(file_name, distributed_rank=rank, filename="val_log.txt", mode="a")
-#     import json
-#     logger.info("args: \n{}".format(json.dumps(vars(args), indent=2)))
-#
-#     if args.conf is not None:
-#         exp.test_conf = args.conf
-#     if args.nms is not None:
-#         exp.nmsthre = args.nms
-#     if args.tsize is not None:
-#         exp.test_size = (args.tsize, args.tsize)
-#
-#     model = exp.get_model()
-#     logger.info("Model Summary: {}".format(get_model_info(model, exp.cfg.test.args.test_size)))
-#     logger.info("Model Structure:\n{}".format(str(model)))
-#
-#     evaluator = exp.get_evaluator(args.batch_size, is_distributed, args.test, args.legacy)
-#
-#     torch.cuda.set_device(rank)
-#     model.cuda(rank)
-#     model.eval()
-#
-#     if not args.speed and not args.trt:
-#         assert args.ckpt is not None
-#         ckpt_file = args.ckpt
-#         logger.info("loading checkpoint from {}".format(ckpt_file))
-#         loc = "cuda:{}".format(rank)
-#         ckpt = torch.load(ckpt_file, map_location=loc)
-#         model.load_state_dict(ckpt["model"])
-#         logger.info("loaded checkpoint done.")
-#
-#     if is_distributed:
-#         model = DDP(model, device_ids=[rank])
-#
-#     if args.fuse:
-#         logger.info("\tFusing model...")
-#         model = fuse_model(model)
-#
-#     if args.trt:
-#         assert (
-#             not args.fuse and not is_distributed and args.batch_size == 1
-#         ), "TensorRT model is not support model fusing and distributed inferencing!"
-#         trt_file = os.path.join(file_name, "model_trt.pth")
-#         assert os.path.exists(
-#             trt_file
-#         ), "TensorRT model is not found!\n Run tools/eval/trtDet.py first!"
-#         model.head.decode_in_inference = False
-#         decoder = model.head.decode_outputs
-#     else:
-#         trt_file = None
-#         decoder = None
-#
-#     # start evaluate
-#     *_, summary = evaluator.evaluate(
-#         model, is_distributed, args.fp16, trt_file, decoder, exp.cfg.test.args.test_size
-#     )
-#     logger.info("\n" + summary)
-#
-#
-# if __name__ == "__main__":
-#     args = make_parser().parse_args()
-#     exp = get_exp(args.exp_file)
-#
-#     num_gpu = torch.cuda.device_count() if args.devices is None else args.devices
-#     assert num_gpu <= torch.cuda.device_count()
-#
-#     dist_url = "auto" if args.dist_url is None else args.dist_url
-#     launch(
-#         main,
-#         num_gpu,
-#         args.num_machines,
-#         args.machine_rank,
-#         backend=args.dist_backend,
-#         dist_url=dist_url,
-#         args=(exp, args, num_gpu),
-#     )
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+# Copyright (c) Megvii, Inc. and its affiliates.
+
+import random
+import warnings
+from dotmap import DotMap
+from loguru import logger
+
+import torch
+import torch.backends.cudnn as cudnn
+
+from core.utils import configure_nccl, configure_omp, get_num_devices
+from core.trainers import launch, ClsEval
+from core.tools import register_modules
+
+
+def Eval(config=None, custom_modules=None):
+    exp = DotMap(config)
+
+    num_gpu = get_num_devices() if exp.envs.gpus.devices is None else exp.envs.gpus.devices
+    assert num_gpu <= get_num_devices()
+    dist_url = "auto" if exp.envs.gpus.dist_url is None else exp.envs.gpus.dist_url
+    num_machines = exp.envs.gpus.num_machines
+    machine_rank = exp.envs.gpus.machine_rank
+    dist_backend = exp.envs.gpus.dist_backend
+
+    cache = exp.dataloader.dataset.kwargs.cache
+    launch(main, num_gpu, num_machines, machine_rank, backend=dist_backend, dist_url=dist_url, cache=cache,
+           args=(exp, custom_modules))
+
+
+@logger.catch
+def main(exp, custom_modules):
+    if exp.seed != 0:
+        random.seed(exp.seed)
+        torch.manual_seed(exp.seed)
+        cudnn.deterministic = True
+        warnings.warn(
+            "You have chosen to seed training. This will turn on the CUDNN deterministic setting, "
+            "which can slow down your training considerably! You may see unexpected behavior "
+            "when restarting from checkpoints."
+        )
+
+    # set environment variables for distributed training
+    configure_nccl()
+    configure_omp()
+    cudnn.benchmark = True
+
+    register_modules(custom_modules=custom_modules)   # 注册所有组件
+
+    if exp.type == "cls":
+        trainer = ClsEval(exp)
+        trainer.eval()

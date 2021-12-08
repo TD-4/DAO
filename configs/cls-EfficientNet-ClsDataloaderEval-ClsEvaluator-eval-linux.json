@@ -1,0 +1,100 @@
+{
+    "name": "test-eval",
+    "type": "cls",
+    "seed": 0,
+
+    "envs": {
+        "type": "linux",
+        "gpus": {
+            "dist_backend": "nccl",
+            "dist_url": null,
+            "devices": 1,
+            "num_machines": 1,
+            "machine_rank": 0
+        }
+    },
+    "trainer": {
+        "type": "trainerCls",
+        "log": {
+            "log_dir": "/root/code/DAO/saved",
+            "log_per_iter": 10
+        },
+        "ckpt": "/root/code/DAO/saved/test/12-06_09-43/best_ckpt.pth",
+        "resume": false
+    },
+    "model": {
+        "type": "EfficientNet",
+        "summary_size": [1,224,224],
+        "kwargs": {
+            "model_name": "Efficientnet-b0",
+            "weights_path": "/root/code/DAO/pretrained/efficientnet-b0-355c32eb.pth",
+            "in_channels": 1,
+            "num_classes": 38
+        }
+    },
+    "evaluator": {
+        "type": "ClsEvaluatorIndustry",
+        "dataloader": {
+            "type": "ClsDataloaderEval",
+            "dataset": {
+                "type": "ClsDataset",
+                "kwargs": {
+                    "data_dir": "/root/data/ai_datasets/screen",
+                    "image_set": "vallist.txt",
+                    "in_channels": 1,
+                    "input_size": [224, 224],
+                    "cache": false,
+                    "train_ratio": 0.9,
+                    "shuffle": true,
+                    "sample_range": [2000, 3000],
+                    "images_suffix": [".bmp"]
+                },
+                "transforms": {
+                "kwargs": {
+                    "histogram": {"p": 1},
+                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+                }
+            }
+            },
+            "kwargs": {
+            "num_workers": 4,
+            "batch_size": 256
+        }
+        },
+        "industry": {
+            "kwargs": {
+                "tolerate_class": {
+                    "00BD": ["02BM", "01WL", "02ZW", "aBHLM", "02BM2"],
+                    "02BM": ["00BD", "01WL", "02ZW", "02BLM", "02BM2", "aBHLM"],
+                    "01WL": ["00BD", "02BM", "02ZW", "xMark"],
+                    "02BM2": ["00BD", "01WL", "02ZW", "02BLM", "02BM"],
+                    "02BLM": ["02BM", "02BM2", "02ZW"],
+
+                    "10LD": ["12LM"],
+                    "12LM": ["10LD", "12LLM", "aBHLM"],
+                    "12LLM": ["12LM"],
+
+                    "hHYB": ["hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
+                    "hHYH": ["hHYB", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
+                    "hHYP": ["hHYB", "hHYH", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
+                    "hHYQ": ["hHYB", "hHYH", "hHYP", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
+                    "hHYQ2": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
+                    "hHYS": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
+                    "hHYT": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
+                    "hHYV": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV2", "hHYW", "hHYX", "hHYO"],
+                    "hHYV2": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYW", "hHYX", "hHYO"],
+                    "hHYW": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYX", "hHYO"],
+                    "hHYX": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYO"],
+                    "hHYO": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX"]
+                },
+                "ok_ng_class": {
+                    "ok": ["01BHH", "01BL", "02CJ", "02DY", "02ZW", "aOK", "hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS",
+                           "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "xDWF", "XFlag", "xKong", "xMark", "xMark2", "xMoer",
+                           "xPao", "xPao2"],
+                    "ng": ["00BD", "01WL", "02BLM", "02BM", "02BM2", "02DBBM", "10LD", "11LL", "12LLM", "12LM",
+                           "aBHLM", "xGZ", "xLYJ"]
+                }
+            }
+        }
+    }
+}

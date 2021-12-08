@@ -81,11 +81,11 @@ class Registers:
 BACKBONES = ["EfficientNet"]    # 写到py文件或者包的位置即可
 CLS_MODELS = ["EfficientNet"]
 OPTIMS = ["sgd_warmup_bias_bn_weight"]
-DATASETS = ["CLS_TXT"]
-DATALOADERS = ["CLS_TXTD"]
+DATASETS = ["ClsDataset", "SegDataset", "DetDataset"]
+DATALOADERS = ["ClsDataloaderTrain", "ClsDataloaderEval"]
 LOSSES = ["CrossEntropyLoss"]
 SCHEDULERS = ["cos_lr", "multistep_lr", "warm_cos_lr", "yolox_warm_cos", "yolox_semi_warm_cos_lr"]
-EVALUATORS = ["CLS_TXT_Evaluator"]
+EVALUATORS = ["ClsEvaluator", "ClsEvaluatorIndustry"]
 ALL_MODULES = [
     ("core.modules.models.backbone", BACKBONES),
     ("core.modules.models.cls", CLS_MODELS),

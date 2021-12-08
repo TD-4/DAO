@@ -19,7 +19,7 @@ from core.modules.utils import Meter_Cls
 
 
 @Registers.evaluators.register
-class CLS_TXT_Evaluator:
+class ClsEvaluator:
     def __init__(
             self,
             is_distributed=False,

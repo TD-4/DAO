@@ -318,7 +318,59 @@ class ClsEval:
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
 
     def eval(self):
-        pass
+        self._before_eval()
+        top1, top2, confusion_matrix = self.evaluator.evaluate(self.model, get_world_size() > 1,
+                                                               device="cuda:{}".format(get_local_rank()),
+                                                               output_dir=self.output_dir)
+
+        synchronize()
+
+    def _before_eval(self):
+        """
+        1.Logger Setting
+        2.Model Setting;
+        3.Evaluator Setting;
+        """
+        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
+            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"val_log.txt", mode="a")
+        logger.info("....... Train Before, Setting something ...... ")
+        logger.info("1. Logging Setting ...")
+        logger.info(f"create log file {self.output_dir}/train_log.txt")  # log txt
+        logger.info("exp value:\n{}".format(self.exp))
+        logger.info(f"create Tensorboard logger {self.output_dir}")
+
+        logger.info("2. Model Setting ...")
+        torch.cuda.set_device(get_local_rank())
+        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        logger.info("\n{}".format(model))  # log model structure
+        summary(model, input_size=tuple(self.exp.model.summary_size),
+                device="{}".format(next(model.parameters()).device))  # log torchsummary model
+        model.to("cuda:{}".format(get_local_rank()))  # model to self.device
+
+        ckpt_file = self.exp.trainer.ckpt
+        ckpt = torch.load(ckpt_file, map_location="cuda:{}".format(get_local_rank()))["model"]
+        model = load_ckpt(model, ckpt)
+
+        logger.info("Model DDP Setting")
+        if get_world_size() > 1:
+            model = DDP(model, device_ids=[get_local_rank()], broadcast_buffers=False, output_device=[get_local_rank()])
+
+        self.model = model
+        self.model.eval()
+
+        logger.info("8. Evaluator Setting ... ")
+        self.evaluator = Registers.evaluators.get(self.exp.evaluator.type)(
+            is_distributed=get_world_size() > 1,
+            dataloader=self.exp.evaluator.dataloader,
+            num_classes=self.exp.model.kwargs.num_classes,
+            industry=self.exp.evaluator.industry,
+            **self.exp.evaluator.kwargs
+        )
+        self.train_metrics = Meter_Cls(self.exp.model.kwargs.num_classes)
+        logger.info("Now Eval Start ......")
+
+
 
 
 class ClsDemo:

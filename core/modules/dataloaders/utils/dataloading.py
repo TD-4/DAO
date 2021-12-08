@@ -11,7 +11,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader as torchDataLoader
 from torch.utils.data.dataloader import default_collate
 
-from core.modules.dataloaders.samplers import BatchSampler
+from core.modules.dataloaders.utils.samplers import BatchSampler
 
 
 class DataLoader(torchDataLoader):

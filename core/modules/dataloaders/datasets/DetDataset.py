@@ -5,7 +5,6 @@
 
 import os
 import random
-import functools
 import numpy as np
 from PIL import Image
 from loguru import logger
@@ -18,7 +17,7 @@ from core.modules.register import Registers
 
 
 @Registers.datasets.register
-class CLS_TXT(Dataset):
+class DetDataset(Dataset):
     def __init__(self, data_dir=None, image_set="", in_channels=1,
                  input_size=(224, 224), preproc=None, cache=False,
                  separator=":", train_ratio=0.9, shuffle=True,
