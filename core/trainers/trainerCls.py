@@ -319,11 +319,9 @@ class ClsEval:
 
     def eval(self):
         self._before_eval()
-        top1, top2, confusion_matrix = self.evaluator.evaluate(self.model, get_world_size() > 1,
+        self.evaluator.evaluate(self.model, get_world_size() > 1,
                                                                device="cuda:{}".format(get_local_rank()),
                                                                output_dir=self.output_dir)
-
-        synchronize()
 
     def _before_eval(self):
         """
@@ -369,8 +367,6 @@ class ClsEval:
         )
         self.train_metrics = Meter_Cls(self.exp.model.kwargs.num_classes)
         logger.info("Now Eval Start ......")
-
-
 
 
 class ClsDemo:
