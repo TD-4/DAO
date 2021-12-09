@@ -86,7 +86,7 @@ class SegDataset(Dataset):
             img = np.array(self.imgs[index])
             mask = np.array(self.masks[index])
         else:
-            img, mask = self._load_resize_img(index)
+            img, mask = self._load_img(index)
             if self.in_channels == 1:
                 img = np.expand_dims(img.copy(), axis=2)
             elif self.in_channels == 3:
@@ -119,8 +119,8 @@ class SegDataset(Dataset):
 
     def _load_resize_img(self, index):
         image, mask = self._load_img(index)  # ndarray, ndarray
-        image = cv2.resize(image, self.img_size)
-        mask = cv2.resize(mask, self.img_size)
+        image = cv2.resize(image, self.img_size, interpolation=0)
+        mask = cv2.resize(mask, self.img_size, interpolation=0)
         return image, mask
 
     def _cache_images(self):
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     from dotmap import DotMap
     kk = {
         "kwargs": {
-            "Resize": {"p": 1, "height": 224, "width": 224},
+            "Resize": {"p": 1, "height": 224, "width": 224, "interpolation": 0},
             "histogram": {"p": 1},
             "Normalize": {"mean": 0, "std": 1, "p": 1}
         }
@@ -270,4 +270,8 @@ if __name__ == "__main__":
         data_dir="/root/data/DAO/VOC2007_Seg", preproc=transforms,  image_set="val.txt", in_channels=1,
         input_size=(224, 224), cache=True, d2d=DotMap(d2d),  image_suffix=".jpg", mask_suffix=".png",)
     a, b, c = seg_d.__getitem__(2)
-    print(a, b, c)
+    # print(a, np.unique(b), c)
+    print(c)
+    print(np.unique(b))
+
+    print(np.unique(np.array(Image.open("/root/data/DAO/VOC2007_Seg/masks/000121.png"))))
