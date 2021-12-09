@@ -11,7 +11,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from core.utils import configure_nccl, configure_omp, get_num_devices
-from core.trainers import launch, ClsTrainer
+from core.trainers import launch, ClsTrainer, SegTrainer
 from core.tools import register_modules
 
 
@@ -52,5 +52,8 @@ def main(exp, custom_modules):
 
     if exp.type == "cls":
         trainer = ClsTrainer(exp)
+        trainer.train()
+    elif exp.type == "seg":
+        trainer = SegTrainer(exp)
         trainer.train()
 
