@@ -22,7 +22,7 @@ from core.trainers.utils import gpu_mem_usage, get_palette, colorize_mask
 from core.modules.dataloaders.augments import get_transformer
 
 
-class SegTrainer:
+class DetTrainer:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
@@ -296,7 +296,7 @@ class SegTrainer:
         return self.epoch * self.max_iter + self.iter
 
 
-class SegEval:
+class DetEval:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
@@ -353,7 +353,7 @@ class SegEval:
         logger.info("Now Eval Start ......")
 
 
-class SegDemo:
+class DetDemo:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
@@ -410,12 +410,10 @@ class SegDemo:
             output = colorize_mask(output, get_palette(self.exp.model.kwargs.num_classes))
             output = output.resize((shape[1], shape[0]))
             results.append((output, img_p))
-        for i, (image, img_p) in enumerate(results):
-            image.save(img_p[:-4]+".png")
         return results
 
 
-class SegExport:
+class DetExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
