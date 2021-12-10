@@ -11,7 +11,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from core.utils import configure_nccl, configure_omp, get_num_devices
-from core.trainers import launch, ClsEval, SegEval
+from core.trainers import launch, ClsEval, SegEval, DetEval
 from core.tools import register_modules
 
 
@@ -52,6 +52,11 @@ def main(exp, custom_modules):
     if exp.type == "cls":
         trainer = ClsEval(exp)
         trainer.eval()
-    if exp.type == 'seg':
+    elif exp.type == 'seg':
         trainer = SegEval(exp)
         trainer.eval()
+    elif exp.type == 'det':
+        trainer = DetEval(exp)
+        trainer.eval()
+    else:
+        logger.error("this type {} is not supported, now supported cls, det, seg.".format(exp.type))

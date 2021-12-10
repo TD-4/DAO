@@ -4,9 +4,10 @@
 
 
 from dotmap import DotMap
+from loguru import logger
 
 from core.tools import register_modules
-from core.trainers import ClsExport, SegExport
+from core.trainers import ClsExport, SegExport, DetExport
 
 
 def Export(config=None, custom_modules=None):
@@ -16,6 +17,12 @@ def Export(config=None, custom_modules=None):
     if exp.type == "cls":
         trainer = ClsExport(exp)
         trainer.export()
-    if exp.type == "seg":
+    elif exp.type == "seg":
         trainer = SegExport(exp)
         trainer.export()
+    elif exp.type == 'det':
+        trainer = DetExport(exp)
+        trainer.export()
+    else:
+        logger.error("this type {} is not supported, now supported cls, det, seg.".format(exp.type))
+
