@@ -78,17 +78,20 @@ class Registers:
     evaluators = Register("evaluators")     # 验证器
 
 
-BACKBONES = ["EfficientNet"]    # 写到py文件或者包的位置即可
+BACKBONES = ["EfficientNet", "ResNet"]    # 写到py文件或者包的位置即可
 CLS_MODELS = ["EfficientNet"]
+SEG_MODELS = ["UNet", "UNetResnet", "NestedUNet"]
 OPTIMS = ["sgd_warmup_bias_bn_weight"]
 DATASETS = ["ClsDataset", "SegDataset", "DetDataset"]
-DATALOADERS = ["ClsDataloaderTrain", "ClsDataloaderEval"]
+DATALOADERS = ["ClsDataloaderTrain", "ClsDataloaderEval",
+               "SegDataloaderTrain", "SegDataloaderEval"]
 LOSSES = ["CrossEntropyLoss"]
 SCHEDULERS = ["cos_lr", "multistep_lr", "warm_cos_lr", "yolox_warm_cos", "yolox_semi_warm_cos_lr"]
-EVALUATORS = ["ClsEvaluator", "ClsEvaluatorIndustry"]
+EVALUATORS = ["ClsEvaluator", "ClsEvaluatorIndustry", "SegEvaluator"]
 ALL_MODULES = [
     ("core.modules.models.backbone", BACKBONES),
     ("core.modules.models.cls", CLS_MODELS),
+    ("core.modules.models.seg", SEG_MODELS),
     ("core.modules.optims", OPTIMS),
     ("core.modules.dataloaders.datasets", DATASETS),
     ("core.modules.dataloaders", DATALOADERS),

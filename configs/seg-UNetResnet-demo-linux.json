@@ -1,0 +1,40 @@
+{
+    "name": "test-seg",
+    "type": "seg",
+    "seed": 0,
+
+    "envs": {
+        "type": "linux",
+        "gpus": {
+            "dist_backend": "nccl",
+            "dist_url": null,
+            "devices": 1,
+            "num_machines": 1,
+            "machine_rank": 0
+        }
+    },
+    "model": {
+        "type": "UNetResnet",
+        "summary_size": [3,224,224],
+        "kwargs": {
+            "backbone": "resnet50",
+            "in_channels": 3,
+            "num_classes": 21,
+            "pretrained": true
+        },
+        "ckpt": "/root/code/DAO/saved/test-seg/12-10_11-22/best_ckpt.pth"
+
+    },
+
+    "images": {
+        "type": "image",
+        "image_ext": [".jpg", ".jpeg", ".bmp", ".png"],
+        "path": "/root/code/DAO/resources/2007_000027.jpg",
+        "transforms": {
+            "kwargs": {
+                "Resize":{"p": 1, "height":380, "width":380},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+            }
+        }
+    }
+}

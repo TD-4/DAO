@@ -6,7 +6,7 @@
 from dotmap import DotMap
 
 from core.tools import register_modules
-from core.trainers import ClsExport
+from core.trainers import ClsExport, SegExport
 
 
 def Export(config=None, custom_modules=None):
@@ -15,4 +15,7 @@ def Export(config=None, custom_modules=None):
 
     if exp.type == "cls":
         trainer = ClsExport(exp)
+        trainer.export()
+    if exp.type == "seg":
+        trainer = SegExport(exp)
         trainer.export()

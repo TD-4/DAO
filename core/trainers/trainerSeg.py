@@ -17,8 +17,8 @@ from torchsummary import summary
 from core.modules import Registers
 from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
 from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel
-from core.modules.utils import Meter_Cls, plot_confusion_matrix
-from core.trainers.utils import gpu_mem_usage
+from core.modules.utils import MeterSegTrain
+from core.trainers.utils import gpu_mem_usage, get_palette, colorize_mask
 from core.modules.dataloaders.augments import get_transformer
 
 
@@ -123,13 +123,11 @@ class SegTrainer:
         logger.info("8. Evaluator Setting ... ")
         self.evaluator = Registers.evaluators.get(self.exp.evaluator.type)(
             is_distributed=get_world_size() > 1,
-            type_=self.exp.evaluator.type,
-            dataset=self.exp.evaluator.dataset,
+            dataloader=self.exp.evaluator.dataloader,
             num_classes=self.exp.model.kwargs.num_classes,
-            **self.exp.evaluator.kwargs
         )
+        self.train_metrics = MeterSegTrain()
         self.best_acc = 0
-        self.train_metrics = Meter_Cls(self.exp.model.kwargs.num_classes)
         logger.info("Now Training Start ......")
 
     def _before_epoch(self):
@@ -171,12 +169,10 @@ class SegTrainer:
             param_group["lr"] = lr
 
         iter_end_time = time.time()
-        self.train_metrics.update(
+        self.train_metrics.update_metrics(
             data_time=data_end_time - iter_start_time,
             batch_time=iter_end_time - iter_start_time,
             total_loss=loss.item(),
-            outputs=outputs,
-            targets=targets,
             lr=lr
         )
 
@@ -196,12 +192,10 @@ class SegTrainer:
             progress_str = f"epoch: {self.epoch + 1}/{self.max_epoch}, iter: {self.iter + 1}/{self.max_iter} "
             loss_str = "loss:{:2f}".format(self.train_metrics.total_loss.avg)
             time_str = "iter time:{:2f}, data time:{:2f}".format(self.train_metrics.batch_time.avg, self.train_metrics.data_time.avg)
-            topk_str = "top1:{:4f}, top2:{:4f}".format(self.train_metrics.precision_top1.avg, self.train_metrics.precision_top2.avg)
 
             logger.info(
-                "{}, {}, mem: {:.0f}Mb, {}, {}, lr: {:.3e}, ETA:{}".format(
+                "{}, mem: {:.0f}Mb, {}, {}, lr: {:.3e}, ETA:{}".format(
                     progress_str,
-                    topk_str,
                     gpu_mem_usage(),
                     time_str,
                     loss_str,
@@ -211,9 +205,7 @@ class SegTrainer:
             )
             self.tblogger.add_scalar('train/loss', self.train_metrics.total_loss.avg, self.progress_in_iter)
             self.tblogger.add_scalar('train/lr', self.train_metrics.lr, self.progress_in_iter)
-            self.tblogger.add_scalar('train/top1', self.train_metrics.precision_top1.avg, self.progress_in_iter)
-            self.tblogger.add_scalar('train/top2', self.train_metrics.precision_top2.avg, self.progress_in_iter)
-            self.train_metrics.initialized(False)
+            self.train_metrics.reset_metrics()
 
     def _after_epoch(self):
         self._save_ckpt(ckpt_name="latest")
@@ -235,29 +227,18 @@ class SegTrainer:
             if is_parallel(evalmodel):
                 evalmodel = evalmodel.module
 
-        top1, top2, confusion_matrix = self.evaluator.evaluate(evalmodel, get_world_size() > 1,
-                                                               device="cuda:{}".format(get_local_rank()))
+        pixAcc, mIoU, Class_IoU = self.evaluator.evaluate(evalmodel, get_world_size() > 1,
+                                        device="cuda:{}".format(get_local_rank()))
         self.model.train()
-        if get_rank() == 0 and top1 > self.best_acc:
-            self.tblogger.add_scalar("val/top1", top1, self.epoch + 1)
-            self.tblogger.add_scalar("val/top2", top2, self.epoch + 1)
-            label_txt = os.path.join(self.exp.evaluator.dataset.kwargs.data_dir,
-                                     "labels.txt")
-            class_names = []
-            with open(label_txt, "r") as labels_file:
-                for label in labels_file.readlines():
-                    class_names.append(label.strip().split()[0])
-            self.tblogger.add_figure('val/confusion matrix',
-                                     figure=plot_confusion_matrix(confusion_matrix,
-                                                                  classes=class_names,
-                                                                  normalize=False,
-                                                                  title='Normalized confusion matrix'),
-                                     global_step=self.epoch + 1)
+        if get_rank() == 0:
+            self.tblogger.add_scalar("val/pixAcc", pixAcc, self.epoch + 1)
+            self.tblogger.add_scalar("val/mIoU", mIoU, self.epoch + 1)
+            for k, v in Class_IoU.items():
+                self.tblogger.add_scalar("val/Class_IoU", v, self.epoch + 1)
 
-            logger.info("\n-----Val {}-----\ntop1:{}, top2:{}".format(self.epoch + 1, top1, top2))
         synchronize()
-        self._save_ckpt("last_epoch", top1 > self.best_acc)
-        self.best_acc = max(self.best_acc, top1)
+        self._save_ckpt("last_epoch", mIoU > self.best_acc)
+        self.best_acc = max(self.best_acc, mIoU)
 
     def _save_ckpt(self, ckpt_name, update_best_ckpt=False):
         if get_rank() == 0:
@@ -312,7 +293,7 @@ class SegTrainer:
         return self.epoch * self.max_iter + self.iter
 
 
-class ClsEval:
+class SegEval:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
@@ -365,11 +346,11 @@ class ClsEval:
             industry=self.exp.evaluator.industry,
             **self.exp.evaluator.kwargs
         )
-        self.train_metrics = Meter_Cls(self.exp.model.kwargs.num_classes)
+        self.train_metrics = MeterSegTrain(self.exp.model.kwargs.num_classes)
         logger.info("Now Eval Start ......")
 
 
-class ClsDemo:
+class SegDemo:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
@@ -379,7 +360,7 @@ class ClsDemo:
 
     def _get_model(self):
         logger.info("model setting, on cpu")
-        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        model = Registers.seg_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size),
                 device="{}".format(next(model.parameters()).device))  # log torchsummary model
@@ -421,15 +402,13 @@ class ClsDemo:
         for image in self.images:
             image = torch.tensor(image).unsqueeze(0)  # 1, c, h, w
             output = self.model(image)
-            top1_id = output.squeeze().cpu().detach().numpy().argmax()
-            top1_scores = np.exp(output.cpu().detach().numpy().squeeze().max()) / sum(
-                                                               np.exp(output.cpu().detach().numpy().squeeze()))
-            logger.info("pred:{}, and scores:{:4f}".format(top1_id, top1_scores))
-            results.append((top1_id, top1_scores))
+            output = np.uint8(output.data.max(1)[1].cpu().numpy()[0])
+            output = colorize_mask(output, get_palette(self.exp.model.kwargs.num_classes))
+            results.append(output)
         return results
 
 
-class ClsExport:
+class SegExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
@@ -437,7 +416,7 @@ class ClsExport:
 
     def _get_model(self):
         logger.info("model setting, on cpu")
-        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        model = Registers.seg_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size),
                 device="{}".format(next(model.parameters()).device))  # log torchsummary model

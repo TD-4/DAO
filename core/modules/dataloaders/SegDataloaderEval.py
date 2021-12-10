@@ -9,6 +9,7 @@ import torch.multiprocessing
 
 from core.modules.register import Registers
 from core.modules.dataloaders.augments import get_transformer
+from core.modules.dataloaders.utils.data_prefetcher import DataPrefetcherSeg
 from core.utils import get_world_size
 
 
@@ -39,4 +40,4 @@ def SegDataloaderEval(
     dataloader_kwargs["batch_size"] = batch_size
     val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
     return val_loader, len(val_loader)
-    # return DataPrefetcherCls(val_loader), len(val_loader)
+    # return DataPrefetcherSeg(val_loader), len(val_loader)
