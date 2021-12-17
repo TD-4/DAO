@@ -1,6 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# Copyright (c) Megvii, Inc. and its affiliates.
+
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.17
+# @GitHub:https://github.com/felixfu520
+# @Copy From:
 
 import random
 import warnings
@@ -11,7 +14,7 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from core.utils import configure_nccl, configure_omp, get_num_devices
-from core.trainers import launch, ClsTrainer, SegTrainer, DetTrainer
+from core.trainers import *
 from core.tools import register_modules
 
 
@@ -59,7 +62,10 @@ def main(exp, custom_modules):
     elif exp.type == 'det':
         trainer = DetTrainer(exp)
         trainer.train()
+    elif exp.type == 'anomaly':
+        trainer = AnomalyTrainer(exp)
+        trainer.train()
     else:
-        logger.error("this type {} is not supported, now supported cls, det, seg.".format(exp.type))
+        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly.".format(exp.type))
 
 
