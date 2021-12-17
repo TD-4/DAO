@@ -1,8 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# @auther:FelixFu
-# @Date: 2021.10.1
-# @github:https://github.com/felixfu520
+
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.17
+# @GitHub:https://github.com/felixfu520
+# @Copy From:
+
 import argparse
 import json
 import os
@@ -15,15 +17,17 @@ from core.tools import TrainVal, Eval, Demo, Export
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("AI TrainVal Parser")
-    parser.add_argument("-c", "--exp_file",
-                        default="/root/code/DAO/configs/cls-EfficientNet-sgd_warmup_bias_bn_weight-CLS_TXTD-CrossEntropyLoss-warm_cos_lr-CLS_TXT_Evaluator-demo-linux.json",
+    parser.add_argument("-c", "--config",
+                        default=None,
                         type=str,
                         help="please input your experiment description file")
-    parser.add_argument("-m", "--cus_file", default="/root/code/DAO/configs/super/custom_modules.json", type=str,
-                        help="please input your experiment description file")
+    parser.add_argument("-m", "--custom",
+                        default="/root/code/DAO/configs/super/custom_modules.json",
+                        type=str,
+                        help="please input your modules description file")
 
-    exp = json.load(open(parser.parse_args().exp_file))
-    custom_modules = json.load(open(parser.parse_args().cus_file))
+    exp = json.load(open(parser.parse_args().exp_file))     # load config.json
+    custom_modules = json.load(open(parser.parse_args().cus_file))  # load modules.json
 
     if parser.parse_args().exp_file[:-5].split('-')[-2] == "trainval":
         TrainVal(config=exp, custom_modules=custom_modules)
