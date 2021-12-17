@@ -24,7 +24,7 @@ from core.modules.utils import MeterSegTrain
 from core.modules.dataloaders.augments import get_transformer
 
 
-class SegTrainer:
+class AnomalyTrainer:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
@@ -298,7 +298,7 @@ class SegTrainer:
         return self.epoch * self.max_iter + self.iter
 
 
-class SegEval:
+class AnomalyEval:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
@@ -355,7 +355,7 @@ class SegEval:
         logger.info("Now Eval Start ......")
 
 
-class SegDemo:
+class AnomalyDemo:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
@@ -417,7 +417,7 @@ class SegDemo:
         return results
 
 
-class SegExport:
+class AnomalyExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间

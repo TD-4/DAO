@@ -1,9 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# Code are based on
-# https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/launch.py
-# Copyright (c) Facebook, Inc. and its affiliates.
-# Copyright (c) Megvii, Inc. and its affiliates.
+
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.17
+# @GitHub:https://github.com/felixfu520
+# @Base On: https://github.com/facebookresearch/detectron2/blob/master/detectron2/engine/launch.py
 
 
 import sys
