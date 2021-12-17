@@ -1,13 +1,15 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# Copyright (c) Megvii, Inc. and its affiliates.
 
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.17
+# @GitHub:https://github.com/felixfu520
+# @Copy From:
 
 from dotmap import DotMap
 from loguru import logger
 
 from core.tools import register_modules
-from core.trainers import ClsExport, SegExport, DetExport
+from core.trainers import *
 
 
 def Export(config=None, custom_modules=None):
@@ -23,6 +25,9 @@ def Export(config=None, custom_modules=None):
     elif exp.type == 'det':
         trainer = DetExport(exp)
         trainer.export()
+    elif exp.type == 'anomaly':
+        trainer = AnomalyExport(exp)
+        trainer.export()
     else:
-        logger.error("this type {} is not supported, now supported cls, det, seg.".format(exp.type))
+        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly.".format(exp.type))
 

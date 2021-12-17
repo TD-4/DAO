@@ -1,12 +1,15 @@
-# #!/usr/bin/env python3
-# # -*- coding:utf-8 -*-
-# # Copyright (c) Megvii, Inc. and its affiliates.
+
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.17
+# @GitHub:https://github.com/felixfu520
+# @Copy From:
 
 from loguru import logger
 from dotmap import DotMap
 
 from core.tools import register_modules
-from core.trainers import ClsDemo, SegDemo, DetDemo
+from core.trainers import *
 
 
 @logger.catch
@@ -23,5 +26,8 @@ def Demo(config, custom_modules):
     elif exp.type == 'det':
         trainer = DetDemo(exp)
         trainer.demo()
+    elif exp.type == 'anomaly':
+        trainer = AnomalyDemo(exp)
+        trainer.demo()
     else:
-        logger.error("this type {} is not supported, now supported cls, det, seg.".format(exp.type))
+        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly.".format(exp.type))
