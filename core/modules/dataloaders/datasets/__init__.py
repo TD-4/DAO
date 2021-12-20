@@ -1,1 +1,2 @@
+from .MVTecDataset import MVTecDataset
 

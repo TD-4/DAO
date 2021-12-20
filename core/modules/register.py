@@ -70,6 +70,7 @@ class Registers:
     cls_models = Register("cls_models")     # 分类模型
     seg_models = Register("seg_models")     # 分割模型
     det_models = Register("det_models")     # 目标检测模型
+    anomaly_models = Register("anomaly_models")     # 异常检测模型
     optims = Register("optim")              # 优化器
     datasets = Register("datasets")         # 数据集
     dataloaders = Register("dataloaders")   # 数据加载器
@@ -78,53 +79,29 @@ class Registers:
     evaluators = Register("evaluators")     # 验证器
 
 
-BACKBONES = ["EfficientNet", "ResNet"]    # 写到py文件或者包的位置即可
-CLS_MODELS = ["EfficientNet"]
-SEG_MODELS = ["UNet", "UNetResnet", "NestedUNet"]
-OPTIMS = ["sgd_warmup_bias_bn_weight"]
-DATASETS = ["ClsDataset", "SegDataset", "DetDataset"]
-DATALOADERS = ["ClsDataloaderTrain", "ClsDataloaderEval",
-               "SegDataloaderTrain", "SegDataloaderEval"]
-LOSSES = ["CrossEntropyLoss"]
-SCHEDULERS = ["cos_lr", "multistep_lr", "warm_cos_lr", "yolox_warm_cos", "yolox_semi_warm_cos_lr"]
-EVALUATORS = ["ClsEvaluator", "ClsEvaluatorIndustry", "SegEvaluator"]
-ALL_MODULES = [
-    ("core.modules.models.backbone", BACKBONES),
-    ("core.modules.models.cls", CLS_MODELS),
-    ("core.modules.models.seg", SEG_MODELS),
-    ("core.modules.optims", OPTIMS),
-    ("core.modules.dataloaders.datasets", DATASETS),
-    ("core.modules.dataloaders", DATALOADERS),
-    ("core.modules.losses", LOSSES),
-    ("core.modules.schedulers", SCHEDULERS),
-    ("core.modules.evaluators", EVALUATORS),
-]
-
-
 def import_all_modules_for_register(custom_modules=None):
     """Import all modules for register."""
-    all_modules = ALL_MODULES
-
-    _add_custom_modules(all_modules, custom_modules)     # 添加自定义modules
-    logger.info(f"All modules: {all_modules}")
-
-    errors = []
-    for base_dir, modules in all_modules:
-        for name in modules:
-            try:
-                if base_dir != "":
-                    full_name = base_dir + "." + name
-                else:
-                    full_name = name
-                importlib.import_module(full_name)
-                logger.info(f"{full_name} loaded.")
-            except ImportError as error:
-                errors.append((name, error))
-    _handle_errors(errors)
+    _register_core()    # 注册核心组件
+    _register_custom(custom_modules)    # 注册自定义组件
 
 
-def _add_custom_modules(all_modules, custom_modules):
-    """Add custom modules to all_modules"""
+def _register_core():
+    all_modules = [
+        "core.modules.dataloaders",
+        "core.modules.evaluators",
+        "core.modules.losses",
+        "core.modules.models",
+        "core.modules.optims",
+        "core.modules.schedulers",
+    ]
+
+    for modules in all_modules:
+        importlib.import_module(modules)
+        logger.info(" modules {}(core) loaded ! ".format(modules))
+
+
+def _register_custom(custom_modules):
+    all_modules = []
     if custom_modules is not None and "custom_modules" in custom_modules:
         custom_modules = custom_modules["custom_modules"]
         if not isinstance(custom_modules, list):
@@ -132,21 +109,17 @@ def _add_custom_modules(all_modules, custom_modules):
         for module in custom_modules:
             custom_modules_path = os.path.join(module[:module.rfind("/")])
             sys.path.append(custom_modules_path)
-            all_modules.append(("", [_path_to_module_format(module)]))
+            all_modules.append(_path_to_module_format(module))
+
+        for modules in all_modules:
+            importlib.import_module(modules)
+            logger.info("modules {}(custom) loaded ! ".format(modules))
 
 
 def _path_to_module_format(py_path):
     """Transform a python file path to module format."""
     return py_path.split("/")[-1].rstrip(".py")
 
-
-def _handle_errors(errors):
-    """Log out and possibly reraise errors during import."""
-    if not errors:
-        return
-    for name, err in errors:
-        logger.error("Module {} import failed: {}".format(name, err))
-    logger.error("Please check these modules.")
 
 
 
