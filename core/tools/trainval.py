@@ -30,8 +30,10 @@ def TrainVal(config=None, custom_modules=None):
     dist_backend = exp.envs.gpus.dist_backend
 
     cache = exp.dataloader.dataset.kwargs.cache
-
-    launch(main, num_gpu, num_machines, machine_rank, backend=dist_backend, dist_url=dist_url, cache=cache, args=(exp, custom_modules))
+    if 'gpu' in exp.envs:   # 单机单卡
+        main(exp, custom_modules)
+    else:   # 单机多卡， 多机多卡
+        launch(main, num_gpu, num_machines, machine_rank, backend=dist_backend, dist_url=dist_url, cache=cache, args=(exp, custom_modules))
 
 
 @logger.catch
