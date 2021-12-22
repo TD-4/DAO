@@ -1,5 +1,5 @@
 {
-    "name": "anomaly-PaDiM-MVTecDataset-eval-linux",
+    "name": "anomaly-PaDiM-MVTecDataset-trainval-linux",
     "type": "anomaly",
     "seed": 0,
 
@@ -18,12 +18,17 @@
     },
     "model": {
         "type": "PaDiM",
+        "backbone": {
+            "type": "wide_resnet50_2",
+            "kwargs": {
+                "out_indices":[1, 2, 3],
+                "pretrained": true,
+                "features_only": true,
+                "in_chans": 3
+            }
+
+        },
         "kwargs": {
-            "backbone": "wide_resnet50_2",
-            "out_indices":[1, 2, 3],
-            "in_channels": 3,
-            "pretrained": true,
-            "features_only": true,
             "d_reduced": 550,
             "image_size": 224,
             "beta": 5
@@ -34,7 +39,7 @@
         "dataset": {
             "type": "MVTecDataset",
             "kwargs": {
-                "data_dir": "/root/data/datasets/anomaly_detection/PaDim/mvtec_anomaly_detection/light",
+                "data_dir": "/root/data/DAO/mvtec_anomaly_detection/light",
                 "image_set": "train.txt",
                 "in_channels": 3,
                 "input_size": [224, 224],
@@ -58,7 +63,7 @@
         "dataset": {
             "type": "MVTecDataset",
             "kwargs": {
-                "data_dir": "/root/data/datasets/anomaly_detection/PaDim/mvtec_anomaly_detection/light",
+                "data_dir": "/root/data/DAO/mvtec_anomaly_detection/light",
                 "image_set": "val.txt",
                 "in_channels": 3,
                 "input_size": [224, 224],

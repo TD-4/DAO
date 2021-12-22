@@ -25,30 +25,34 @@ from skimage import morphology
 from skimage.segmentation import mark_boundaries
 
 import torch
+import timm
 import torch.nn.functional as F
 
 from core.modules.register import Registers
 
-from .CNNExtractor import CNNExtractor
-
 
 @Registers.anomaly_models.register
-class PaDiM(CNNExtractor):
-    def __init__(self, backbone, out_indices=(1, 2, 3), in_channels=3, pretrained=True, features_only=True,
-                 d_reduced: int = 100, image_size=224, device=None, beta=1, **kwargs
+class PaDiM:
+    def __init__(self,
+                 backbone,
+                 device=None,
+                 d_reduced: int = 100,
+                 image_size=224,
+                 beta=1,
                  ):
-        super().__init__(
-            backbone_name=backbone,
-            out_indices=out_indices,
-            in_chans=in_channels,
-            pretrained=pretrained,
-            features_only=features_only,
-            device=device,
-            **kwargs
+        self.feature_extractor = timm.create_model(
+            backbone.type,
+            **backbone.kwargs
         )
+        for param in self.feature_extractor.parameters():
+            param.requires_grad = False
+        self.feature_extractor.eval()
+        self.feature_extractor = self.feature_extractor.to(device)
+
         self.image_size = image_size
         self.d_reduced = d_reduced  # your RAM will thank you
         self.beta = beta
+        self.device = device
 
         random.seed(1024)
         torch.manual_seed(1024)
@@ -62,26 +66,21 @@ class PaDiM(CNNExtractor):
             feature_maps = []
             for image, mask, label, image_path in tqdm(train_dl, desc="Train: "):
                 # model prediction
-                feature_maps.append(self(image))
+                feature_maps.append([fmap.to("cpu") for fmap in self.feature_extractor(image.to(self.device))])
 
-            # feature_maps is [[layer1, layer2, layer3], ..., to all train data len]
-            train_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
+            # 将feature_maps 转为 embedding_vectors: torch.Size([200, 1792, 56, 56])
+            embedding_vectors = []
             for feature_map in feature_maps:
-                train_outputs['layer1'].append(feature_map[0])
-                train_outputs['layer2'].append(feature_map[1])
-                train_outputs['layer3'].append(feature_map[2])
-            for k, v in train_outputs.items():
-                train_outputs[k] = torch.cat(v, 0)
-
-            # Embedding concat
-            embedding_vectors = train_outputs['layer1']
-            for layer_name in ['layer2', 'layer3']:
-                embedding_vectors = embedding_concat(embedding_vectors, train_outputs[layer_name])
+                embedding_vector = feature_map[0]
+                for layer in feature_map[1:]:
+                    embedding_vector = embedding_concat(embedding_vector, layer)
+                embedding_vectors.append(embedding_vector)
+            embedding_vectors = torch.cat(embedding_vectors, dim=0)
 
             # randomly select d dimension
-            total_d = sum([v.shape[1] for k, v in train_outputs.items()])
-            idx = torch.tensor(sample(range(0, total_d), self.d_reduced))
+            idx = torch.tensor(sample(range(0, embedding_vectors.shape[1]), self.d_reduced))
             embedding_vectors = torch.index_select(embedding_vectors, 1, idx)
+
             # calculate multivariate Gaussian distribution
             B, C, H, W = embedding_vectors.size()
             embedding_vectors = embedding_vectors.view(B, C, H * W)
@@ -89,7 +88,7 @@ class PaDiM(CNNExtractor):
             cov = torch.zeros(C, C, H * W).numpy()
             I = np.identity(C)
 
-            for i in tqdm(range(H * W), desc="Train cal:"):
+            for i in tqdm(range(H * W), desc="Train calculate cov:"):
                 cov[:, :, i] = np.cov(embedding_vectors[:, :, i].numpy(), rowvar=False) + 0.01 * I
             # save learned distribution
             train_outputs = [mean, cov, idx]
@@ -106,40 +105,36 @@ class PaDiM(CNNExtractor):
         gt_list = []
         gt_mask_list = []
         test_imgs = []
+        test_imgs_path = []
         self.test_outputs = []
 
         feature_maps = []
         # extract test set features
-        for image, mask, label, image_path in tqdm(test_dl, desc="evaluate: "):
+        for image, mask, label, image_path in tqdm(test_dl, desc="Evaluate: "):
             test_imgs.extend(image.cpu().detach().numpy())
             gt_list.extend(label.cpu().detach().numpy())
             gt_mask_list.extend(mask.cpu().detach().numpy())
+            test_imgs_path.extend(image_path)
 
-            feature_maps.append(self(image))
+            feature_maps.append([fmap.to("cpu") for fmap in self.feature_extractor(image.to(self.device))])
 
-        # feature_maps is [[layer1, layer2, layer3], ..., to all train data len]
-        test_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
+        # 将feature_maps 转为 embedding_vectors: torch.Size([200, 1792, 56, 56])
+        embedding_vectors = []
         for feature_map in feature_maps:
-            test_outputs['layer1'].append(feature_map[0])
-            test_outputs['layer2'].append(feature_map[1])
-            test_outputs['layer3'].append(feature_map[2])
-        for k, v in test_outputs.items():
-            test_outputs[k] = torch.cat(v, 0)
-
-        # Embedding concat
-        embedding_vectors = test_outputs['layer1']
-        for layer_name in ['layer2', 'layer3']:
-            embedding_vectors = embedding_concat(embedding_vectors, test_outputs[layer_name])
+            embedding_vector = feature_map[0]
+            for layer in feature_map[1:]:
+                embedding_vector = embedding_concat(embedding_vector, layer)
+            embedding_vectors.append(embedding_vector)
+        embedding_vectors = torch.cat(embedding_vectors, dim=0)
 
         # randomly select d dimension
-        total_d = sum([v.shape[1] for k, v in test_outputs.items()])
         embedding_vectors = torch.index_select(embedding_vectors, 1, self.train_output[2])
 
         # calculate distance matrix
         B, C, H, W = embedding_vectors.size()
         embedding_vectors =embedding_vectors.view(B, C, H * W).numpy()
         dist_list = []
-        for i in tqdm(range(H * W), desc="cal cov:"):
+        for i in tqdm(range(H * W), desc="Evaluate calculate cov::"):
             mean = self.train_output[0][:, i]
             conv_inv = np.linalg.inv(self.train_output[1][:, :, i])
             dist = [mahalanobis(sample[:, i], mean, conv_inv) for sample in embedding_vectors]
@@ -148,9 +143,9 @@ class PaDiM(CNNExtractor):
         dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)
 
         # upsample
-        dist_list = torch.tensor(dist_list)
+        dist_list = torch.tensor(dist_list) # torch.Size([49, 56, 56])
         score_map = F.interpolate(dist_list.unsqueeze(1), size=self.image_size, mode='bilinear',
-                                  align_corners=False).squeeze().numpy()
+                                  align_corners=False).squeeze().numpy()    # (49, 224, 224)
 
         # apply gaussian smoothing on the score map
         for i in range(score_map.shape[0]):
@@ -159,40 +154,50 @@ class PaDiM(CNNExtractor):
         # Normalization
         max_score = score_map.max()
         min_score = score_map.min()
-        scores = (score_map - min_score) / (max_score - min_score)
+        scores = (score_map - min_score) / (max_score - min_score)  # (49, 224, 224)
 
-        # calculate image-level ROC AUC score
         fig, ax = plt.subplots(1, 2, figsize=(20, 10))
         fig_img_rocauc = ax[0]
         fig_pixel_rocauc = ax[1]
 
-        img_scores = scores.reshape(scores.shape[0], -1).max(axis=1)
-        gt_list = np.asarray(gt_list)
+        # calculate image-level ROC AUC score
+        img_scores = scores.reshape(scores.shape[0], -1).max(axis=1)    # shape 49
+        gt_list = np.asarray(gt_list)   # shape 49
         fpr, tpr, _ = roc_curve(gt_list, img_scores)
         img_roc_auc = roc_auc_score(gt_list, img_scores)
         logger.info('image ROCAUC: %.3f' % (img_roc_auc))
         fig_img_rocauc.plot(fpr, tpr, label='img_ROCAUC: %.3f' % (img_roc_auc))
 
+        # calculate per-pixel level ROCAUC
+        gt_mask = np.where(np.asarray(gt_mask_list) != 0, 1, 0)  # (49, 1, 224, 224)
+        fpr, tpr, _ = roc_curve(gt_mask.flatten(), scores.flatten())
+        per_pixel_rocauc = roc_auc_score(gt_mask.flatten(), scores.flatten())
+        logger.info('pixel ROCAUC: %.3f' % (per_pixel_rocauc))
+        fig_pixel_rocauc.plot(fpr, tpr, label='ROCAUC: %.3f' % (per_pixel_rocauc))
+
+        # 绘制ROC曲线，image-level&pixel-level
+        save_dir = os.path.join(output_dir, "pictures")
+        os.makedirs(save_dir, exist_ok=True)
+        fig.tight_layout()
+        fig.savefig(os.path.join(save_dir, 'roc_curve.png'), dpi=100)
+
         # get optimal threshold
-        gt_mask = np.where(np.asarray(gt_mask_list) != 0, 1, 0)
         precision, recall, thresholds = precision_recall_curve(gt_mask.flatten(), scores.flatten())
         a = (1 + self.beta ** 2) * precision * recall
         b = self.beta ** 2 * precision + recall
         f1 = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
         threshold = thresholds[np.argmax(f1)]
 
-        # calculate per-pixel level ROCAUC
-        fpr, tpr, _ = roc_curve(gt_mask.flatten(), scores.flatten())
-        per_pixel_rocauc = roc_auc_score(gt_mask.flatten(), scores.flatten())
-        logger.info('pixel ROCAUC: %.3f' % (per_pixel_rocauc))
+        # 绘制每张test图片预测信息
+        # test_imgs:[(3, 224, 224), ..., batchsize]
+        # scores: (batchsize, 224, 224)
+        # gt_mask_list: [(1, 224, 224), ..., batchsize]
+        # threshold: float
+        # save_dir: str
+        # test_imgs_path: [img_path, ..., batchsize]
+        plot_fig(test_imgs, scores, gt_mask_list, threshold, save_dir, test_imgs_path)
 
-        fig_pixel_rocauc.plot(fpr, tpr, label='ROCAUC: %.3f' % (per_pixel_rocauc))
-        save_dir = os.path.join(output_dir, "pictures")
-        os.makedirs(save_dir, exist_ok=True)
-        plot_fig(test_imgs, scores, gt_mask_list, threshold, save_dir, "pic")
 
-        fig.tight_layout()
-        fig.savefig(os.path.join(save_dir, 'roc_curve.png'), dpi=100)
 
 
 def plot_fig(test_img, scores, gts, threshold, save_dir, class_name):
@@ -245,7 +250,8 @@ def plot_fig(test_img, scores, gts, threshold, save_dir, class_name):
         }
         cb.set_label('Anomaly Score', fontdict=font)
 
-        fig_img.savefig(os.path.join(save_dir, class_name + '_{}'.format(i)), dpi=100)
+        img_name = class_name[i].split("/")[-1]
+        fig_img.savefig(os.path.join(save_dir, img_name), dpi=100)
         plt.close()
 
 
