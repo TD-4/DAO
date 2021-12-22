@@ -1,0 +1,49 @@
+{
+    "name": "anomaly-PaDiM-MVTecDataset-demo-linux",
+    "type": "anomaly",
+    "seed": 0,
+
+    "envs": {
+        "type": "linux",
+        "gpu": {
+            "gpuid": 0
+        }
+    },
+    "trainer": {
+        "type": "trainerAnomaly",
+        "log": {
+            "log_dir": "/root/code/DAO/saved"
+        }
+
+    },
+    "model": {
+        "type": "PaDiM",
+        "backbone": {
+            "type": "wide_resnet50_2",
+            "kwargs": {
+                "out_indices":[1, 2, 3],
+                "pretrained": true,
+                "features_only": true,
+                "in_chans": 3
+            }
+
+        },
+        "kwargs": {
+            "d_reduced": 550,
+            "image_size": 224,
+            "beta": 5
+        },
+        "ckpt":"/root/code/DAO/saved/anomaly-PaDiM-MVTecDataset-trainval-linux/features.pkl"
+    },
+    "images": {
+        "type": "images",
+        "image_ext": [".jpg", ".jpeg", ".bmp", ".png"],
+        "path": "/root/code/test/",
+        "transforms": {
+            "kwargs": {
+                "Resize":{"p": 1, "height":224, "width":224},
+                "Normalize": {"mean": [0.485, 0.456, 0.406], "std": [0.229, 0.224, 0.225], "p": 1}
+            }
+        }
+    }
+}
