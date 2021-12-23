@@ -197,7 +197,10 @@ class PaDiM:
         # test_imgs_path: [img_path, ..., batchsize]
         plot_fig(test_imgs, scores, gt_mask_list, threshold, save_dir, test_imgs_path)
 
-
+        train_feature_filepath = os.path.join(output_dir, 'features.pkl')
+        train_outputs = [self.train_output[0], self.train_output[1], self.train_output[2], threshold]
+        with open(train_feature_filepath, 'wb') as f:
+            pickle.dump(train_outputs, f)
 
 
 def plot_fig(test_img, scores, gts, threshold, save_dir, class_name):
