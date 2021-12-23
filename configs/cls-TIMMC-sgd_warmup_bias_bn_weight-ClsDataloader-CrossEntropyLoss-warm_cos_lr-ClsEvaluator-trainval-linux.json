@@ -1,5 +1,5 @@
 {
-    "name": "test",
+    "name": "cls-EfficientNet-sgd_warmup_bias_bn_weight-ClsDataset-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux",
     "type": "cls",
     "seed": 0,
 
@@ -33,13 +33,19 @@
         "ema": true
     },
     "model": {
-        "type": "EfficientNet",
+        "type": "TIMMC",
         "summary_size": [1,224,224],
+        "backbone": {
+            "kwargs": {
+                "model_name":"efficientnet_b0",
+                "pretrained": true,
+                "checkpoint_path": "",
+                "exportable": true,
+                "in_chans": 1,
+                "num_classes": 38
+            }
+        },
         "kwargs": {
-            "model_name": "Efficientnet-b0",
-            "weights_path": "/root/code/DAO/pretrained/efficientnet-b0-355c32eb.pth",
-            "in_channels": 1,
-            "num_classes": 38
         }
     },
     "optimizer": {
