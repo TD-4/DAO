@@ -75,19 +75,21 @@ class AnomalyEval:
 
     def _before_eval(self):
         self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name)
-        setup_logger(self.output_dir, distributed_rank=0, filename=f"train_log.txt", mode="a")
+        setup_logger(self.output_dir, distributed_rank=0, filename=f"eval_log.txt", mode="a")
 
         logger.warning("Anomaly Detection only supported one machine and one gpu !!!!")
         logger.info("....... Train Before, Setting something ...... ")
 
         logger.info("1. Logging Setting ...")
-        logger.info(f"create log file {self.output_dir}/train_log.txt")  # log txt
+        logger.info(f"create log file {self.output_dir}/eval_log.txt")  # log txt
         logger.info("exp value:{}".format(self.exp))
 
         logger.info("2. Model Setting ...")
         self.device = torch.device("cuda:{}".format(self.exp.envs.gpu.gpuid))
         self.model = Registers.anomaly_models.get(self.exp.model.type)(
-            device=self.device, **self.exp.model.kwargs)  # get model from register
+            self.exp.model.backbone,
+            device=self.device,
+            **self.exp.model.kwargs)  # get model from register
 
         logger.info("3. Dataloader Setting ...")
         self.train_loader = Registers.dataloaders.get(self.exp.dataloader.type)(
@@ -222,7 +224,8 @@ class AnomalyDemo:
             # threshold: float
             # save_dir: str
             # test_imgs_path: [img_path, ..., batchsize]
-            self.plot_fig(image_, scores, img_p)
+            threshold = train_output[3]
+            self.plot_fig(image_, scores, threshold, img_p)
 
     def denormalization(self, x):
         mean = np.array([0.485, 0.456, 0.406])
@@ -231,7 +234,7 @@ class AnomalyDemo:
 
         return x
 
-    def plot_fig(self, test_img, scores, img_p):
+    def plot_fig(self, test_img, scores, threshold, img_p):
         import matplotlib.pyplot as plt
         import matplotlib
         from skimage import morphology
@@ -243,8 +246,10 @@ class AnomalyDemo:
         img = self.denormalization(test_img)
         heat_map = scores * 255
         mask = scores
-        mask[mask > np.mean(scores)] = 1
-        mask[mask <= np.mean(scores)] = 0
+        threshold = np.median(scores) if threshold is None else threshold
+
+        mask[mask > threshold] = 1
+        mask[mask <= threshold] = 0
         kernel = morphology.disk(4)
         mask = morphology.opening(mask, kernel)
         mask *= 255
@@ -255,14 +260,18 @@ class AnomalyDemo:
         for ax_i in ax_img:
             ax_i.axes.xaxis.set_visible(False)
             ax_i.axes.yaxis.set_visible(False)
+
             ax_img[0].imshow(img)
             ax_img[0].title.set_text('Image')
+
             ax = ax_img[1].imshow(heat_map, cmap='jet', norm=norm)
             ax_img[1].imshow(img, cmap='gray', interpolation='none')
             ax_img[1].imshow(heat_map, cmap='jet', alpha=0.5, interpolation='none')
             ax_img[1].title.set_text('Predicted heat map')
+
             ax_img[2].imshow(mask, cmap='gray')
             ax_img[2].title.set_text('Predicted mask')
+
             ax_img[3].imshow(vis_img)
             ax_img[3].title.set_text('Segmentation result')
             left = 0.92
