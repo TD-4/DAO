@@ -1,2 +1,4 @@
-import timm
+from .TIMM import TIMM
+
+
 
