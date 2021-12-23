@@ -12,11 +12,11 @@ from core.modules.dataloaders.augments import get_transformer
 
 
 @Registers.dataloaders.register
-class MVTecDataloaderTrain(DataLoader):
-    def __init__(self, dataset, batch_size=32, num_workers=2, shuffle=False):
+class MVTecDataloader(DataLoader):
+    def __init__(self, dataset, batch_size=1, num_workers=2, shuffle=False):
         dataset = Registers.datasets.get(dataset.type)(
             preproc=get_transformer(dataset.transforms.kwargs), **dataset.kwargs)
-        super(MVTecDataloaderTrain, self).__init__(
+        super(MVTecDataloader, self).__init__(
             dataset=dataset,
             batch_size=batch_size,
             shuffle=shuffle,
@@ -24,14 +24,4 @@ class MVTecDataloaderTrain(DataLoader):
         )
 
 
-@Registers.dataloaders.register
-class MVTecDataloaderEval(DataLoader):
-    def __init__(self, dataset, batch_size=32, num_workers=2, shuffle=False):
-        dataset = Registers.datasets.get(dataset.type)(
-            preproc=get_transformer(dataset.transforms.kwargs), **dataset.kwargs)
-        super(MVTecDataloaderEval, self).__init__(
-            dataset=dataset,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=num_workers
-        )
+

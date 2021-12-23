@@ -4,7 +4,7 @@
 # @GitHub:https://github.com/felixfu520
 # @Copy From:
 
-from .datasets import MVTecDataset
+from .datasets import MVTecDataset, ClsDataset, DetDataset, SegDataset, IQADataset
 
-from .AnomalyDataloader import MVTecDataloaderTrain, MVTecDataloaderEval
+from .AnomalyDataloader import MVTecDataloader
 

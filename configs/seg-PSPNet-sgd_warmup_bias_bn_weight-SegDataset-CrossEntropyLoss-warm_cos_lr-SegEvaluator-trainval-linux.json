@@ -1,5 +1,5 @@
 {
-    "name": "test-seg",
+    "name": "seg-PSPNet-sgd_warmup_bias_bn_weight-SegDataset-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux",
     "type": "seg",
     "seed": 0,
 

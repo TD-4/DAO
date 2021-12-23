@@ -20,17 +20,19 @@ from core.tools import register_modules
 
 def Eval(config=None, custom_modules=None):
     exp = DotMap(config)
+    if 'gpu' in exp.envs:  # 单机单卡
+        main(exp, custom_modules)
+    else:
+        num_gpu = get_num_devices() if exp.envs.gpus.devices is None else exp.envs.gpus.devices
+        assert num_gpu <= get_num_devices()
+        dist_url = "auto" if exp.envs.gpus.dist_url is None else exp.envs.gpus.dist_url
+        num_machines = exp.envs.gpus.num_machines
+        machine_rank = exp.envs.gpus.machine_rank
+        dist_backend = exp.envs.gpus.dist_backend
 
-    num_gpu = get_num_devices() if exp.envs.gpus.devices is None else exp.envs.gpus.devices
-    assert num_gpu <= get_num_devices()
-    dist_url = "auto" if exp.envs.gpus.dist_url is None else exp.envs.gpus.dist_url
-    num_machines = exp.envs.gpus.num_machines
-    machine_rank = exp.envs.gpus.machine_rank
-    dist_backend = exp.envs.gpus.dist_backend
-
-    cache = exp.dataloader.dataset.kwargs.cache
-    launch(main, num_gpu, num_machines, machine_rank, backend=dist_backend, dist_url=dist_url, cache=cache,
-           args=(exp, custom_modules))
+        cache = exp.dataloader.dataset.kwargs.cache
+        launch(main, num_gpu, num_machines, machine_rank, backend=dist_backend, dist_url=dist_url, cache=cache,
+               args=(exp, custom_modules))
 
 
 @logger.catch

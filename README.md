@@ -1,4 +1,4 @@
-# AI+工业
+# FelixFu的项目集合
 
 ## 1. 项目由来
 
@@ -13,39 +13,54 @@
 
 在**深度学习训练**中，训练过程包括：
 
-- multigpus(是否使用多GPU形式训练)-->utils
-- mixedprecisions(是否使用混合精度进行训练)-->utils
-- loggers(训练过程日志输出)-->utils
-  - tensorboard
-  - log文字日志
-- dataloaders(数据加载)-->dataloaders**(1)**
-- models(模型：分类、分割、检测等)-->models**(2)**
-- losses(损失函数)-->losses**(3)**
-- optims(优化器)-->optims**(4)**
-- schedulers(学习率调整策略)-->schedulers**(5)**
-- metrics(训练过程中的性能评价)-->utils
-- utils(其他工具单元)-->utils
-- trainers(训练过程)-->trainers**(6)**
-  - resume
-  - fune turning
-  - 日志监控
-  - 权重输出
-  - ...
+- 组件
+  - dataloaders(数据加载)
+  - models(模型：分类、分割、检测、异常检测等[Task](https://paperswithcode.com/sota))
+  - losses(损失函数)
+  - optims(优化器)
+  - schedulers(学习率调整策略)
+  - evaluator(训练过程中的性能评价)
 
+- 联系（将上述组件联系起来）
+  - trainers(训练过程)
+    - resume
+    - fune turning
+    - 日志监控(训练过程日志输出，tensorboard，...)
+    - 权重输出
+    - multigpus(是否使用多GPU形式训练)
+    - mixedprecisions(是否使用混合精度进行训练)
+    - ......
 
-
-目前，我所遇到的深度学习项目基本都能用这两个维度概括，为了方便以后使用，在此将两个维度整理成这个项目，将**工业流程（train、eval、demo、export、deploy的调用API）**封装到tools库中，将**深度学习训练(train & eval核心过程)**封装到core中。
+目前，我所遇到的深度学习项目基本都能用这两个维度概括，为了方便以后使用，在此将两个维度整理成这个项目，将**工业流程（train、eval、demo、export、deploy的调用API）**封装到core.tools库中，将**深度学习训练(train & eval核心过程)**封装到core中。
 
 ## 2. 目录结构
+
+### 2.1 组件支持
+
+- Models
+
+  - Backbone
+    - 使用[timm](resources/timm_introduce.md)作为backbone
+
+  - Segmentation
+
+  - Detection
+
+- DataLoader
+
+  - [MVTecDataset](resources/dataset_mvtecdataset.md)
+
+- loss
+
+- ...
 
 ### 2.1 项目结构
 
 ```tree
 root@c98fb50f30a8:~/code/DAO# tree
-.
 ├── configs # 配置文件
+│   ├── task-model-optim-datasetType-loss-scheduler-trainval-arch.json
 │   ├── ...
-│   ├── cls-EfficientNet-sgd_warmup_bias_bn_weight-CLS_TXTD-CrossEntropyLoss-warm_cos_lr-CLS_TXT_Evaluator-trainval-linux.json
 │   └── super
 │       ├── custom_modules.json
 │       ├── dataloaders.json

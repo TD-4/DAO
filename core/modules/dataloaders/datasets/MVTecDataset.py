@@ -68,13 +68,13 @@ class MVTecDataset(Dataset):
             logger.warning("MVTecDataset not supported cache !")
 
     def __getitem__(self, index):
-        image, mask, image_path = self.pull_item(index)  # image:ndarray, label:ndarray, image_path:string
+        image, mask, label, image_path = self.pull_item(index)  # image:ndarray, label:ndarray, image_path:string
         if self.preproc is not None:
             transformed = self.preproc(image=image, mask=mask)
             image, mask = transformed['image'], transformed["mask"]
         image = image.transpose(2, 0, 1)  # c, h, w
         mask = mask.astype(np.int64)  # c, h, w
-        return image, mask, image_path
+        return image, mask, label, image_path
 
     def pull_item(self, index):
         img, mask = self._load_img(index)
@@ -82,7 +82,7 @@ class MVTecDataset(Dataset):
             img = np.expand_dims(img.copy(), axis=2)
         elif self.in_channels == 3:
             img = img.copy()
-        return img, mask, self.x[index]
+        return img, mask, self.y[index], self.x[index]
 
     def _load_img(self, index):
         image_path = self.x[index]

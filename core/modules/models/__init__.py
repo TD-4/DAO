@@ -1,1 +1,1 @@
-from .anomaly import PatchCore
+from .anomaly import PaDiM

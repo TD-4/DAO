@@ -66,3 +66,35 @@ def SegDataloaderTrain(
     train_loader = DataPrefetcherSeg(train_loader)
     return train_loader, max_iter
 
+
+
+
+
+@Registers.dataloaders.register
+def SegDataloaderEval(
+        is_distributed=False,
+        batch_size=None,
+        num_workers=None,
+        dataset=None,
+        **kwargs
+):
+    valdataset = Registers.datasets.get(dataset.type)(
+        preproc=get_transformer(dataset.transforms.kwargs),
+        d2d=dataset.d2d,
+        **dataset.kwargs
+    )
+    if is_distributed:
+        batch_size = batch_size // get_world_size()
+        sampler = torch.utils.data.distributed.DistributedSampler(valdataset, shuffle=False)
+    else:
+        sampler = torch.utils.data.SequentialSampler(valdataset)
+
+    dataloader_kwargs = {
+        "num_workers": num_workers,
+        "pin_memory": True,
+        "sampler": sampler,
+    }
+    dataloader_kwargs["batch_size"] = batch_size
+    val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
+    return val_loader, len(val_loader)
+    # return DataPrefetcherSeg(val_loader), len(val_loader)
