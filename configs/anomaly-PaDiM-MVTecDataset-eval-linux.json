@@ -1,5 +1,5 @@
 {
-    "name": "anomaly-PaDiM-MVTecDataset-trainval-linux",
+    "name": "anomaly-PaDiM-MVTecDataset-eval-linux",
     "type": "anomaly",
     "seed": 0,
 
