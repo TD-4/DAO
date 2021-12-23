@@ -24,5 +24,6 @@ def TIMM(backbone):
         logger.error("{} hasn't pretrained weight, please set pretrained False".format(
             backbone.kwargs.model_name
         ))
+
     model = timm.create_model(**backbone.kwargs)
     return model
