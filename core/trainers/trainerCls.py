@@ -67,7 +67,9 @@ class ClsTrainer:
 
         logger.info("2. Model Setting ...")
         torch.cuda.set_device(get_local_rank())
-        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        model = Registers.cls_models.get(self.exp.model.type)(
+            self.exp.model.backbone,
+            **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))   # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size), device="{}".format(next(model.parameters()).device))  # log torchsummary model
         model.to("cuda:{}".format(get_local_rank()))    # model to self.device
