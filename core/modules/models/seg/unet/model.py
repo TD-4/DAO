@@ -5,8 +5,7 @@
 # @Copy From:
 from typing import Optional, Union, List
 from core.modules.models.seg.unet.decoder import UnetDecoder
-from core.modules.models.seg.base import SegmentationModel
-from core.modules.models.seg.base import SegmentationHead, ClassificationHead
+from core.modules.models.seg.base import SegmentationHead, ClassificationHead, SegmentationModel
 
 from core.modules.register import Registers
 
