@@ -49,6 +49,9 @@ class AverageMeter(object):
 
 
 class MeterSegTrain(object):
+    """
+    监控data_time, batch_time, total_loss, lr
+    """
     def __init__(self):
         self.reset_metrics()
         self.lr = 0
@@ -79,7 +82,7 @@ class MeterSegEval(object):
     def update_seg_metrics(self, correct, labeled, inter, union):
         self.total_correct += correct  # 预测正确的像素点
         self.total_label += labeled  # 所有像素点
-        self.total_inter += inter  # 21类中的交，即预测正确的像素点（每一个类）
+        self.total_inter += inter  # 21类中的交，即预测正确的像素点（每一个类）, list shape 为21
         self.total_union += union  # 21类中的并，即预测正确与错误的像素点（每一个类）
 
     def get_seg_metrics(self):
@@ -111,7 +114,7 @@ class MeterSegEval(object):
         target = target + 1
 
         # （4,380,380) 属于正常范围（分类值在【1，21】）内的每个像素. 255(+1后为256）是标注的轮廓，不是object， 所以不属于labeled中
-        labeled = (target > 0) * (target <= num_class)  # torch.Size([4, 380, 380]) True or False(原value是255的）
+        labeled = (target > 0) * (target <= num_class)  # torch.Size([4, 380, 380]) True or False(原value是255的）; 即排除原255像素值的mask
         # 获得标注正确的像素个数，和所有标注的像素个数(除去255）
         correct, num_labeled = self._batch_pix_accuracy(predict, target, labeled)   # correct为预测正确个数， num_labeled为标签标注像素个数
         # 获得predict与target的inter(21),union(21)
@@ -125,8 +128,8 @@ class MeterSegEval(object):
         return pixel_correct.cpu().numpy(), pixel_labeled.cpu().numpy()
 
     def _batch_intersection_union(self, predict, target, num_class, labeled):
-        predict = predict * labeled.long()  # labeled的predict
-        intersection = predict * (predict == target).long()  # 与target一致的predict，交
+        predict = predict * labeled.long()  # labeled的predict， torch.Size([16, 224, 224])
+        intersection = predict * (predict == target).long()  # 与target一致的predict, 交, 筛选, torch.Size([16, 224, 224])
 
         area_inter = torch.histc(intersection.float(), bins=num_class, max=num_class, min=1)  # 预测正确的直方图（类别），交
         area_pred = torch.histc(predict.float(), bins=num_class, max=num_class, min=1)  # 预测的直方图（类别），predict 面积
