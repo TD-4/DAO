@@ -1,6 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
+
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.17
+# @GitHub:https://github.com/felixfu520
+# @Copy From:
+
 
 import inspect
 import os
