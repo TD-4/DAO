@@ -69,5 +69,3 @@ def main(exp, custom_modules):
         trainer.train()
     else:
         logger.error("this type {} is not supported, now supported cls, det, seg, anomaly.".format(exp.type))
-
-
