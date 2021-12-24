@@ -245,7 +245,7 @@ class SegTrainer:
             self.tblogger.add_scalar("val/pixAcc", pixAcc, self.epoch + 1)
             self.tblogger.add_scalar("val/mIoU", mIoU, self.epoch + 1)
             for k, v in Class_IoU.items():
-                self.tblogger.add_scalar("val/{} IoU".format(k), v, self.epoch + 1)
+                self.tblogger.add_scalar("val_detail/{} IoU".format(k), v, self.epoch + 1)
 
         synchronize()
         self._save_ckpt("last_epoch", mIoU > self.best_acc)
