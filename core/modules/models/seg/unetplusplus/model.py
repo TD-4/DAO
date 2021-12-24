@@ -3,14 +3,9 @@
 # @Time    : 2021/11/22 13:41
 # @Author  : yangqiang
 # @Software: PyCharm
-# from .utils import SegmentationModel
-# from .utils import SegmentationHead
-# import torch.nn as nn
-# from .utils import modules as md
-# import torch
 
-
-from core.modules.models.seg.base import SegmentationModel, SegmentationHead
+from typing import Optional, Union, List
+from core.modules.models.seg.base import SegmentationModel, SegmentationHead, ClassificationHead
 from core.modules.models.seg.unetplusplus.decoder import UnetPlusPlusDecoder
 from core.modules.register import Registers
 
@@ -20,29 +15,41 @@ class UnetPlusPlus(SegmentationModel):
     def __init__(
         self,
         encoder,
+        encoder_depth=5,
+        encoder_channels=None,
+        decoder_use_batchnorm: bool = True,
+        decoder_channels: List[int] = (256, 128, 64, 32, 16),
+        decoder_attention_type: Optional[str] = None,
         num_classes=2,
-        encoder_channels=None
+        activation: Optional[Union[str, callable]] = None,
+        aux_params: Optional[dict] = None,
     ):
         super().__init__()
 
         self.encoder = Registers.backbones.get("TIMM")(encoder)
         self.decoder = UnetPlusPlusDecoder(
             encoder_channels=encoder_channels,
-            decoder_channels=[256, 128, 64, 32, 16],
-            n_blocks=5,
-            use_batchnorm=True,
-            center=False,
-            attention_type=None,
+            decoder_channels=decoder_channels,
+            n_blocks=encoder_depth,
+            use_batchnorm=decoder_use_batchnorm,
+            center=True if encoder.kwargs.model_name.startswith("vgg") else False,
+            attention_type=decoder_attention_type,
         )
 
         self.segmentation_head = SegmentationHead(
-            in_channels=16,
+            in_channels=decoder_channels[-1],
             out_channels=num_classes,
-            activation=None,
+            activation=activation,
             kernel_size=3,
         )
-        self.classification_head = None
-        self.name = "unetplusplus-{}".format(encoder.kwargs.model_name)
+        if aux_params is not None:
+            self.classification_head = ClassificationHead(
+                in_channels=encoder_channels[-1], **aux_params
+            )
+        else:
+            self.classification_head = None
+
+        self.name = "unet-{}".format(encoder.kwargs.model_name)
         self.initialize()
 
 
@@ -59,7 +66,6 @@ if __name__ == '__main__':
                 "checkpoint_path": "",
                 "exportable": True,
                 "in_chans": 3,
-                "num_classes": 2,
                 "features_only": True
             }
         },
