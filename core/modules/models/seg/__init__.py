@@ -4,7 +4,6 @@
 # @Author  : yangqiang
 # @File    : __init__.py.py
 
-from .unetplusplus.model import UnetPlusPlus
-# from .unet import Unet
-# from .deeplabv3 import DeepLabV3, DeepLabV3Plus
-# from .ddrnet import DdrNet
+from .unet import Unet
+from .unetplusplus import UnetPlusPlus
+from .deeplab import DeepLabV3, DeepLabV3Plus
