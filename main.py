@@ -41,3 +41,4 @@ if __name__ == "__main__":
         logger.error("this type {} is not supported, now supported trainval, eval, demo, export".format(
             parser.parse_args().exp_file[:-5].split('-')[-2])
         )
+
