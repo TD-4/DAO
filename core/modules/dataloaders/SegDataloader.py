@@ -16,13 +16,14 @@ from core.utils import wait_for_the_master, get_local_rank, get_world_size
 
 
 @Registers.dataloaders.register
-def SegDataloaderTrain(
-        is_distributed=False,
-        batch_size=None,
-        num_workers=None,
-        dataset=None,
-        seed=0,
-        **kwargs):
+def SegDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0):
+    """
+    is_distributed : bool 是否是分布式
+    batch_size : int batchsize大小
+    num_workers : int 读取数据线程数
+    dataset : DotMap 数据集配置
+    seed : int 随机种子
+    """
     # 获得local_rank
     local_rank = get_local_rank()
 
@@ -30,7 +31,6 @@ def SegDataloaderTrain(
     with wait_for_the_master(local_rank):
         dataset_Seg = Registers.datasets.get(dataset.type)(
             preproc=get_transformer(dataset.transforms.kwargs),
-            d2d=dataset.d2d,
             **dataset.kwargs)
 
     # 如果是分布式，batch size需要改变
@@ -67,20 +67,17 @@ def SegDataloaderTrain(
     return train_loader, max_iter
 
 
-
-
-
 @Registers.dataloaders.register
-def SegDataloaderEval(
-        is_distributed=False,
-        batch_size=None,
-        num_workers=None,
-        dataset=None,
-        **kwargs
-):
+def SegDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, dataset=None):
+    """
+    is_distributed : bool 是否是分布式
+    batch_size : int batchsize大小
+    num_workers : int 读取数据线程数
+    dataset : DotMap 数据集配置
+    seed : int 随机种子
+    """
     valdataset = Registers.datasets.get(dataset.type)(
         preproc=get_transformer(dataset.transforms.kwargs),
-        d2d=dataset.d2d,
         **dataset.kwargs
     )
     if is_distributed:
