@@ -4,7 +4,7 @@
 
 ### Unet
 
-[core.modules.models.seg.unet](../core/modules/models/seg/unet/model.py)
+[source](../core/modules/models/seg/unet/model.py)
 
 **构造函数**
 
@@ -61,12 +61,12 @@ aux_params: Optional[dict] = None,
 
 ### sgd_warmup_bias_bn_weight
 
-`core.modules.optims.sgd_warmup_bias_bn_weight`
+[source](../core/modules/optims/sgd_warmup_bias_bn_weight.py)
 
 **构造函数**
 
 ```
-func sgd_warmup_bias_bn_weight(model=None,
+def sgd_warmup_bias_bn_weight(model=None,
                               lr=0.01,
                               weight_decay=1e-4,
                               momentum=0.9,
@@ -101,6 +101,8 @@ func sgd_warmup_bias_bn_weight(model=None,
 ## 3. datasets & dataloaders
 
 ### SegDataset
+
+[source](../core/modules/dataloaders/datasets/SegDataset.py)
 
 **构造函数**
 
@@ -150,10 +152,12 @@ Class SegDataset(data_dir=None, preproc=None, image_set="", in_channels=1, input
 
 ### SegDataloaderTrain
 
+[source](../core/modules/dataloaders/SegDataloader.py)
+
 **构造函数**
 
 ```
-Fun SegDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0)
+def SegDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0)
 """
 is_distributed : bool 是否是分布式
 batch_size : int batchsize大小
@@ -194,6 +198,8 @@ seed : int 随机种子
 ```
 
 ### SegDataloaderEval
+
+[source](../core/modules/dataloaders/SegDataloader.py)
 
 **构造函数**
 
@@ -242,6 +248,8 @@ def SegDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, d
 
 ### CrossEntropyLoss
 
+[source](../core/modules/losses/CrossEntropyLoss.py)
+
 **构造函数**
 
 ```
@@ -270,6 +278,8 @@ def CrossEntropyLoss(weight=None, ignore_index=255, reduction='mean')
 
 ### warm_cos_lr
 
+[source](../core/modules/schedulers/warm_cos_lr.py)
+
 **构造函数**
 
 ```
@@ -285,11 +295,11 @@ class warm_cos_lr(self, lr, iters_per_epoch, total_epochs, **kwargs):
         """
 ```
 
-```
-evaluate(self, model, distributed=False, half=False, device=None)
-```
+**调用方法**
 
-
+```
+def update_lr(self, iters) 更新lr
+```
 
 **configs**
 
@@ -307,10 +317,18 @@ evaluate(self, model, distributed=False, half=False, device=None)
 
 ### SegEvaluator
 
+[source](../core/modules/evaluators/SegEvaluator.py)
+
 **构造函数**
 
 ```
 class SegEvaluator(is_distributed=False, dataloader=None, num_classes=None)
+```
+
+**调用方法**
+
+```
+evaluate(self, model, distributed=False, half=False, device=None)
 ```
 
 **configs**
