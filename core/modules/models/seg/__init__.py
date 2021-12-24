@@ -6,4 +6,5 @@
 
 from .unet import Unet
 from .unetplusplus import UnetPlusPlus
+from .pspnet import PSPNet
 from .deeplab import DeepLabV3, DeepLabV3Plus
