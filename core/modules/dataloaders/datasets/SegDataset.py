@@ -1,13 +1,14 @@
-# _*_coding:utf-8_*_
-# @auther:FelixFu
-# @Date: 2021.4.14
-# @github:https://github.com/felixfu520
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.14
+# @GitHub:https://github.com/felixfu520
+# @Copy From:
 
 import os
 import numpy as np
 from PIL import Image
-from loguru import logger
 import cv2
+from loguru import logger
 
 from torch.utils.data import Dataset
 
@@ -23,7 +24,6 @@ class SegDataset(Dataset):
                  in_channels=1,
                  input_size=(224, 224),
                  cache=False,
-                 d2d=None,
                  image_suffix=".jpg",
                  mask_suffix=".png",
                  ):
@@ -41,11 +41,8 @@ class SegDataset(Dataset):
         input_size:tuple 输入图片的HW
         preproc:albumentations.Compose 对图片进行预处理
         cache:bool 是否对图片进行内存缓存
-        separator:str None
-        train_ratio:float 生成train.txt的比例
-        shuffle:bool 生成train.txt时，folder中的数据是否随机打乱
-        sample_range:tuple 每类允许的最多图片数量的范围
-        images_suffix:list[str] 可接受的图片后缀
+        images_suffix:str 可接受的图片后缀
+        mask_suffix:str
         """
         # set attr
         self.root = data_dir
@@ -61,11 +58,7 @@ class SegDataset(Dataset):
         self.labels = list()
         self.labels_dict = dict()
 
-        # 数据集格式转换
-        if d2d.type is not None:
-            pass
-
-        self._set_ids()  # 获取所有文件名，存放到self.ids中
+        self._set_ids()  # 获取所有文件名，存放到self.ids中 [(image_path, mask_path), ... ]
         self.imgs = None
         self.masks = None
         if cache:
@@ -251,24 +244,29 @@ class SegDataset(Dataset):
 if __name__ == "__main__":
     from core.modules.dataloaders.augments import get_transformer
     from dotmap import DotMap
-    kk = {
+
+    dataset_c = {
+        "type": "SegDataset",
         "kwargs": {
-            "Resize": {"p": 1, "height": 224, "width": 224, "interpolation": 0},
-            "histogram": {"p": 1},
-            "Normalize": {"mean": 0, "std": 1, "p": 1}
+            "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
+            "image_set": "train.txt",
+            "in_channels": 3,
+            "input_size": [380, 380],
+            "cache": True,
+            "image_suffix": ".jpg",
+            "mask_suffix": ".png"
+        },
+        "transforms": {
+            "kwargs": {
+                "Resize": {"height": 224, "width": 224, "p": 1},
+                "Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
+
+            }
         }
     }
-    d2d = {
-            "type": "labelme2seg",
-            "kwargs": {
-                "train_ratio": 0.9,
-            }
-
-    }
-    transforms = get_transformer(kk["kwargs"])
-    seg_d = SegDataset(
-        data_dir="/root/data/DAO/VOC2007_Seg", preproc=transforms,  image_set="val.txt", in_channels=1,
-        input_size=(224, 224), cache=True, d2d=DotMap(d2d),  image_suffix=".jpg", mask_suffix=".png",)
+    dataset_c = DotMap(dataset_c)
+    transforms = get_transformer(dataset_c.transforms.kwargs)
+    seg_d = SegDataset(preproc=transforms, **dataset_c.kwargs)
     a, b, c = seg_d.__getitem__(2)
     # print(a, np.unique(b), c)
     print(c)
