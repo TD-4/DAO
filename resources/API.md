@@ -4,7 +4,7 @@
 
 ### Unet
 
-[core.modules.models.seg.unet](../core/modules/models/unet/model.py)
+[core.modules.models.seg.unet](../core/modules/models/seg/unet/model.py)
 
 **构造函数**
 
