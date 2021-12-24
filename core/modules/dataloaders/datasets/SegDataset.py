@@ -231,6 +231,11 @@ class SegDataset(Dataset):
                 mask_path = os.path.join(self.root, "masks", image_label.strip() + self.mask_suffix)
                 self.ids.append((image_path, mask_path))
 
+        with open(os.path.join(self.root, "labels.txt"), 'r', encoding='utf-8') as labels:
+            for label in labels:
+                self.labels_dict[label.split()[0]] = label.split()[1]
+                self.labels.append(label.split()[1])
+
     def __len__(self):
         return len(self.ids)
 
