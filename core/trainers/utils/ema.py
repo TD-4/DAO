@@ -7,7 +7,7 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 
-__all__ = ["ModelEMA", "is_parallel"]
+__all__ = ["ModelEMA", "is_parallel", "EMA"]
 
 
 def is_parallel(model):
@@ -64,3 +64,42 @@ class ModelEMA:
                 if v.dtype.is_floating_point:
                     v *= d
                     v += (1.0 - d) * msd[k].detach()
+
+    def get_weights_copy(self, model):
+        weights_path = 'weights_temp.pt'
+        torch.save(model.state_dict(), weights_path)
+        return torch.load(weights_path)
+
+
+class EMA:
+    def __init__(self, model, decay):
+        self.model = model.module if is_parallel(model) else model
+        self.decay = decay
+        self.shadow = {}
+        self.backup = {}
+
+    def register(self):
+        for name, param in self.model.named_parameters():
+            if param.requires_grad:
+                self.shadow[name] = param.data.clone()
+
+    def update(self):
+        for name, param in self.model.named_parameters():
+            if param.requires_grad:
+                assert name in self.shadow
+                new_average = (1.0 - self.decay) * param.data + self.decay * self.shadow[name]
+                self.shadow[name] = new_average.clone()
+
+    def apply_shadow(self):
+        for name, param in self.model.named_parameters():
+            if param.requires_grad:
+                assert name in self.shadow
+                self.backup[name] = param.data
+                param.data = self.shadow[name]
+
+    def restore(self):
+        for name, param in self.model.named_parameters():
+            if param.requires_grad:
+                assert name in self.backup
+                param.data = self.backup[name]
+        self.backup = {}
