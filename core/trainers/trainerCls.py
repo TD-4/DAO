@@ -1,6 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# Copyright (c) Megvii, Inc. and its affiliates.
+
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.17
+# @GitHub:https://github.com/felixfu520
+# @Copy From:
+
 
 import os
 import time
@@ -17,7 +21,7 @@ from torchsummary import summary
 from core.modules import Registers
 from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
 from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel
-from core.modules.utils import Meter_Cls, plot_confusion_matrix
+from core.modules.utils import MeterClsTrain, plot_confusion_matrix
 from core.trainers.utils import gpu_mem_usage
 from core.modules.dataloaders.augments import get_transformer
 
@@ -125,13 +129,11 @@ class ClsTrainer:
         logger.info("8. Evaluator Setting ... ")
         self.evaluator = Registers.evaluators.get(self.exp.evaluator.type)(
             is_distributed=get_world_size() > 1,
-            type_=self.exp.evaluator.type,
-            dataset=self.exp.evaluator.dataset,
-            num_classes=self.exp.model.kwargs.num_classes,
+            dataloader=self.exp.evaluator.dataloader,
             **self.exp.evaluator.kwargs
         )
         self.best_acc = 0
-        self.train_metrics = Meter_Cls(self.exp.model.kwargs.num_classes)
+        self.train_metrics = MeterClsTrain()
         logger.info("Now Training Start ......")
 
     def _before_epoch(self):
@@ -215,7 +217,7 @@ class ClsTrainer:
             self.tblogger.add_scalar('train/lr', self.train_metrics.lr, self.progress_in_iter)
             self.tblogger.add_scalar('train/top1', self.train_metrics.precision_top1.avg, self.progress_in_iter)
             self.tblogger.add_scalar('train/top2', self.train_metrics.precision_top2.avg, self.progress_in_iter)
-            self.train_metrics.initialized(False)
+            self.train_metrics.reset(False)
 
     def _after_epoch(self):
         self._save_ckpt(ckpt_name="latest")
@@ -238,12 +240,13 @@ class ClsTrainer:
                 evalmodel = evalmodel.module
 
         top1, top2, confusion_matrix = self.evaluator.evaluate(evalmodel, get_world_size() > 1,
-                                                               device="cuda:{}".format(get_local_rank()))
+                                                               device="cuda:{}".format(get_local_rank()),
+                                                               output_dir=self.output_dir)
         self.model.train()
         if get_rank() == 0 and top1 > self.best_acc:
             self.tblogger.add_scalar("val/top1", top1, self.epoch + 1)
             self.tblogger.add_scalar("val/top2", top2, self.epoch + 1)
-            label_txt = os.path.join(self.exp.evaluator.dataset.kwargs.data_dir,
+            label_txt = os.path.join(self.exp.evaluator.dataloader.dataset.kwargs.data_dir,
                                      "labels.txt")
             class_names = []
             with open(label_txt, "r") as labels_file:
@@ -322,8 +325,8 @@ class ClsEval:
     def eval(self):
         self._before_eval()
         self.evaluator.evaluate(self.model, get_world_size() > 1,
-                                                               device="cuda:{}".format(get_local_rank()),
-                                                               output_dir=self.output_dir)
+                                device="cuda:{}".format(get_local_rank()),
+                                output_dir=self.output_dir)
 
     def _before_eval(self):
         """
@@ -367,7 +370,7 @@ class ClsEval:
             industry=self.exp.evaluator.industry,
             **self.exp.evaluator.kwargs
         )
-        self.train_metrics = Meter_Cls(self.exp.model.kwargs.num_classes)
+        self.train_metrics = MeterClsTrain()
         logger.info("Now Eval Start ......")
 
 
