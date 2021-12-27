@@ -31,14 +31,14 @@ class ClsDataset(Dataset):
                     |-图片
                 |- 类别2
 
-        image_set:str "trainlist.txt or vallist.txt"
+        image_set:str "train.txt or val.txt"
         in_channels:int  输入图片的通道数，目前只支持1和3通道
         input_size:tuple 输入图片的HW
         preproc:albumentations.Compose 对图片进行预处理
         cache:bool 是否对图片进行内存缓存
         separator:str labels.txt id与name的分隔符
         train_ratio:float 生成trianlist.txt的比例
-        shuffle:bool 生成trainlist.txt时，folder中的数据是否随机打乱
+        shuffle:bool 生成train.txt时，folder中的数据是否随机打乱
         sample_range:tuple 每类允许的最多图片数量的范围
         images_suffix:list[str] 可接受的图片后缀
         """
@@ -57,7 +57,7 @@ class ClsDataset(Dataset):
         # 将Folder格式数据集 转为 TXT格式数据集
         split_txt = os.path.join(data_dir, image_set) if (data_dir is not None and image_set is not None) else None
         if not os.path.exists(split_txt):
-            logger.info("generate dataset  in '{}' folder labels.txt,trainlist.txt,vallist.txt".format(data_dir))
+            logger.info("generate dataset  in '{}' folder labels.txt,train.txt,val.txt".format(data_dir))
             self._gen_label_txt(data_dir)
             self._gen_trainvallist(data_dir, train_ratio=train_ratio, shuffle=shuffle, suffix=images_suffix,
                                    sample_range=sample_range)
@@ -199,8 +199,8 @@ class ClsDataset(Dataset):
         suffix = [".bmp"] if shuffle is None else suffix
         all_folders = [folder for folder in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, folder))]
         all_folders.sort()
-        train_labels = os.path.join(data_dir, "trainlist.txt")
-        val_labels = os.path.join(data_dir, "vallist.txt")
+        train_labels = os.path.join(data_dir, "train.txt")
+        val_labels = os.path.join(data_dir, "val.txt")
         data_count = [0, 0, 0]  # class_one:[n_total, len(train_list), len(val_list)] + ...
         with open(train_labels, "a+") as train_file, open(val_labels, "a+") as val_file:
             for folder in all_folders:  # 处理每个文件夹
