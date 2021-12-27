@@ -5,4 +5,8 @@
 # @GitHub:https://github.com/felixfu520
 # @Copy From:
 
+# cls
+from .ClsEvaluator import ClsEvaluator
+
+# seg
 from .SegEvaluator import SegEvaluator
