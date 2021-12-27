@@ -62,8 +62,8 @@
         "dataset": {
             "type": "ClsDataset",
             "kwargs": {
-                "data_dir": "/root/data/ai_datasets/screen",
-                "image_set": "trainlist.txt",
+                "data_dir": "/root/data/DAO/screen",
+                "image_set": "train.txt",
                 "in_channels": 1,
                 "input_size": [224, 224],
                 "cache": false,
@@ -105,29 +105,37 @@
     },
     "evaluator": {
         "type": "ClsEvaluator",
-        "dataset": {
-            "type": "ClsDataset",
-            "kwargs": {
-                "data_dir": "/root/data/ai_datasets/screen",
-                "image_set": "vallist.txt",
-                "in_channels": 1,
-                "input_size": [224, 224],
-                "cache": false,
-                "train_ratio": 0.9,
-                "shuffle": true,
-                "sample_range": [2000, 3000],
-                "images_suffix": [".bmp"]
-            },
-            "transforms": {
+        "dataloader": {
+            "type": "ClsDataloaderEval",
+            "dataset": {
+                "type": "ClsDataset",
                 "kwargs": {
-                    "histogram": {"p": 1},
-                    "Normalize": {"mean": 0, "std": 1, "p": 1}
-                }
+                    "data_dir": "/root/data/DAO/screen",
+                    "image_set": "val.txt",
+                    "in_channels": 1,
+                    "input_size": [224, 224],
+                    "cache": false,
+                    "train_ratio": 0.9,
+                    "shuffle": true,
+                    "sample_range": [2000, 3000],
+                    "images_suffix": [".bmp"]
+                },
+                "transforms": {
+                    "kwargs": {
+                        "histogram": {"p": 1},
+                        "Normalize": {"mean": 0, "std": 1, "p": 1}
+                    }
+            }
+            },
+            "kwargs": {
+                "num_workers": 4,
+                "batch_size": 256
             }
         },
         "kwargs": {
-            "num_workers": 4,
-            "batch_size": 256
+            "num_classes": 38,
+            "is_industry": false
         }
+
     }
 }
