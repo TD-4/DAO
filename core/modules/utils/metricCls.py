@@ -8,7 +8,7 @@ import torch
 import itertools
 import matplotlib.pyplot as plt
 
-__all__ = ['Meter_Cls', 'plot_confusion_matrix']
+__all__ = ['MeterClsTrain', 'MeterClsEval', 'plot_confusion_matrix']
 
 
 class AverageMeter(object):
@@ -48,7 +48,55 @@ class AverageMeter(object):
         return np.round(self.avg, 5)
 
 
-class Meter_Cls(object):
+class MeterClsTrain(object):
+    def __init__(self):
+        self.batch_time = AverageMeter()  # batch训练时间
+        self.data_time = AverageMeter()  # 读取数据时间
+        self.total_loss = AverageMeter()
+        self.precision_top1, self.precision_top2 = AverageMeter(), AverageMeter()
+        self.lr = 0
+
+    def update(self, data_time=None, batch_time=None, total_loss=None,
+               outputs=None, targets=None, lr=None):
+        if batch_time is not None:
+            self.batch_time.update(batch_time)
+        if data_time is not None:
+            self.data_time.update(data_time)
+        if total_loss is not None:
+            self.total_loss.update(total_loss)
+        if outputs is not None and targets is not None:
+            top1, top2 = self._eval_topk(outputs, targets, topk=(1, 2))
+            self.precision_top1.update(top1.item())
+            self.precision_top2.update(top2.item())
+        if lr is not None:
+            self.lr = lr
+
+    def _eval_topk(self, output, target, topk=(1,)):
+        """Computes the accuracy over the k top predictions for the specified values of k"""
+        with torch.no_grad():
+            maxk = max(topk)
+            batch_size = target.size(0)
+
+            _, pred = output.topk(maxk, 1, True, True)
+            pred = pred.t()
+            correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+            res = []
+            for k in topk:
+                correct_k = correct[:k].contiguous().view(-1).float().sum(0, keepdim=True)
+                res.append(correct_k.mul_(100.0 / batch_size))
+            return res
+
+    def reset(self, flag=False):
+        if flag:
+            self.batch_time.initialized = False  # batch训练时间
+            self.data_time.initialized = False  # 读取数据时间
+            self.total_loss.initialized = False
+            self.precision_top1.initialized = False
+            self.precision_top2.initialized = False
+
+
+class MeterClsEval(object):
     def __init__(self, num_class=38):
         self.batch_time = AverageMeter()  # batch训练时间
         self.data_time = AverageMeter()  # 读取数据时间
@@ -98,8 +146,8 @@ class Meter_Cls(object):
     def initialized(self, flag=False):
         if flag:
             self.batch_time.initialized = False  # batch训练时间
-            self.data_time = False  # 读取数据时间
-            self.total_loss = False
+            self.data_time.initialized = False  # 读取数据时间
+            self.total_loss.initialized = False
             self.precision_top1.initialized = False
             self.precision_top2.initialized = False
 
