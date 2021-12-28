@@ -339,13 +339,15 @@ class ClsEval:
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"val_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")
-        logger.info(f"create log file {self.output_dir}/train_log.txt")  # log txt
+        logger.info(f"create log file {self.output_dir}/eval_log.txt")  # log txt
         logger.info("exp value:\n{}".format(self.exp))
         logger.info(f"create Tensorboard logger {self.output_dir}")
 
         logger.info("2. Model Setting ...")
         torch.cuda.set_device(get_local_rank())
-        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        model = Registers.cls_models.get(self.exp.model.type)(
+            self.exp.model.backbone,
+            **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size),
                 device="{}".format(next(model.parameters()).device))  # log torchsummary model
@@ -366,11 +368,8 @@ class ClsEval:
         self.evaluator = Registers.evaluators.get(self.exp.evaluator.type)(
             is_distributed=get_world_size() > 1,
             dataloader=self.exp.evaluator.dataloader,
-            num_classes=self.exp.model.kwargs.num_classes,
-            industry=self.exp.evaluator.industry,
             **self.exp.evaluator.kwargs
         )
-        self.train_metrics = MeterClsTrain()
         logger.info("Now Eval Start ......")
 
 
