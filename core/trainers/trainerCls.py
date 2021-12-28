@@ -383,7 +383,9 @@ class ClsDemo:
 
     def _get_model(self):
         logger.info("model setting, on cpu")
-        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        model = Registers.cls_models.get(self.exp.model.type)(
+            self.exp.model.backbone,
+            **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size),
                 device="{}".format(next(model.parameters()).device))  # log torchsummary model
@@ -417,19 +419,19 @@ class ClsDemo:
             transform = get_transformer(self.exp.images.transforms.kwargs)
             image = transform(image=image)['image']
             image = image.transpose(2, 0, 1)  # c, h, w
-            results.append(image)
+            results.append((img_p, image))
         return results
 
     def demo(self):
         results = []
-        for image in self.images:
+        for img_p, image in self.images:
             image = torch.tensor(image).unsqueeze(0)  # 1, c, h, w
             output = self.model(image)
             top1_id = output.squeeze().cpu().detach().numpy().argmax()
             top1_scores = np.exp(output.cpu().detach().numpy().squeeze().max()) / sum(
                                                                np.exp(output.cpu().detach().numpy().squeeze()))
-            logger.info("pred:{}, and scores:{:4f}".format(top1_id, top1_scores))
-            results.append((top1_id, top1_scores))
+            logger.info("Image:{}\n pred:{}, and scores:{:4f}".format(img_p, top1_id, top1_scores))
+            results.append((img_p, top1_id, top1_scores))
         return results
 
 
