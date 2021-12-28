@@ -443,7 +443,9 @@ class ClsExport:
 
     def _get_model(self):
         logger.info("model setting, on cpu")
-        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        model = Registers.cls_models.get(self.exp.model.type)(
+            self.exp.model.backbone,
+            **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size),
                 device="{}".format(next(model.parameters()).device))  # log torchsummary model
