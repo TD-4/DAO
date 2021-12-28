@@ -3,15 +3,21 @@
     "type": "cls",
 
     "model": {
-        "type": "EfficientNet",
+        "type": "TIMMC",
         "summary_size": [1,224,224],
-        "kwargs": {
-            "model_name": "Efficientnet-b0",
-            "weights_path": "/root/code/DAO/pretrained/efficientnet-b0-355c32eb.pth",
-            "in_channels": 1,
-            "num_classes": 38
+        "ckpt": "/root/code/DAO/saved/cls-EfficientNet-sgd_warmup_bias_bn_weight-ClsDataset-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/smsg/best_ckpt.pth",
+        "backbone": {
+            "kwargs": {
+                "model_name":"efficientnet_b0",
+                "pretrained": true,
+                "checkpoint_path": "",
+                "exportable": true,
+                "in_chans": 1,
+                "num_classes": 38
+            }
         },
-        "ckpt": "/root/code/DAO/saved/test/12-06_09-43/best_ckpt.pth"
+        "kwargs": {
+        }
     },
     "images": {
         "type": "images",
