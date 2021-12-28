@@ -47,7 +47,7 @@ from core.modules.register import Registers
 
 @Registers.evaluators.register
 class ClsEvaluator:
-    def __init__(self, is_distributed=False, dataloader=None, num_classes=None, is_industry=False):
+    def __init__(self, is_distributed=False, dataloader=None, num_classes=None, is_industry=False, industry=None):
         self.dataloader, self.iters_per_epoch = Registers.dataloaders.get(dataloader.type)(
             is_distributed=is_distributed,
             dataset=dataloader.dataset,
@@ -57,6 +57,7 @@ class ClsEvaluator:
         self.best_acc = 0
         self.num_class = num_classes
         self.is_industry = is_industry
+        self.industry = industry
 
     def evaluate(self, model, distributed=False, half=False, device=None, output_dir=None):
         tensor_type = torch.cuda.HalfTensor if half else torch.cuda.FloatTensor
@@ -167,7 +168,7 @@ class ClsEvaluator:
                     "4.当scores>阈值，且pred==label， 将结果放入validate/ok目录下\n"
                     "总的图片 = other + ok + tolerate + ng")
         with torch.no_grad():
-            cam_extractor = CAM(model, target_layer="_conv_head")
+            cam_extractor = CAM(model, target_layer="")
             for output_tensor, label, img_p in zip(outputs, targets, paths):
                 label = str(label.cpu().numpy().item())
                 prediction = output_tensor.squeeze(0).cpu().detach().numpy()
