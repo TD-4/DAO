@@ -1,5 +1,5 @@
 {
-    "name": "test-eval",
+    "name": "cls-TIMMC-ClsDataset-ClsEvaluator-eval-linux",
     "type": "cls",
     "seed": 0,
 
@@ -19,28 +19,34 @@
             "log_dir": "/root/code/DAO/saved",
             "log_per_iter": 10
         },
-        "ckpt": "/root/code/DAO/saved/test/12-06_09-43/best_ckpt.pth",
+        "ckpt": "/root/code/DAO/saved/cls-EfficientNet-sgd_warmup_bias_bn_weight-ClsDataset-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/smsg/best_ckpt.pth",
         "resume": false
     },
     "model": {
-        "type": "EfficientNet",
+        "type": "TIMMC",
         "summary_size": [1,224,224],
+        "backbone": {
+            "kwargs": {
+                "model_name":"efficientnet_b0",
+                "pretrained": true,
+                "checkpoint_path": "",
+                "exportable": true,
+                "in_chans": 1,
+                "num_classes": 38
+            }
+        },
         "kwargs": {
-            "model_name": "Efficientnet-b0",
-            "weights_path": "/root/code/DAO/pretrained/efficientnet-b0-355c32eb.pth",
-            "in_channels": 1,
-            "num_classes": 38
         }
     },
     "evaluator": {
-        "type": "ClsEvaluatorIndustry",
+        "type": "ClsEvaluator",
         "dataloader": {
             "type": "ClsDataloaderEval",
             "dataset": {
                 "type": "ClsDataset",
                 "kwargs": {
-                    "data_dir": "/root/data/ai_datasets/screen",
-                    "image_set": "vallist.txt",
+                    "data_dir": "/root/data/DAO/screen",
+                    "image_set": "val.txt",
                     "in_channels": 1,
                     "input_size": [224, 224],
                     "cache": false,
@@ -50,51 +56,55 @@
                     "images_suffix": [".bmp"]
                 },
                 "transforms": {
-                "kwargs": {
-                    "histogram": {"p": 1},
-                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+                    "kwargs": {
+                        "histogram": {"p": 1},
+                        "Normalize": {"mean": 0, "std": 1, "p": 1}
+                    }
                 }
-            }
             },
             "kwargs": {
-            "num_workers": 4,
-            "batch_size": 256
-        }
+                "num_workers": 4,
+                "batch_size": 256
+            }
         },
-        "industry": {
+        "kwargs": {
+            "num_classes": 38,
+            "is_industry": true,
+            "industry": {
             "kwargs": {
                 "tolerate_class": {
-                    "00BD": ["02BM", "01WL", "02ZW", "aBHLM", "02BM2"],
-                    "02BM": ["00BD", "01WL", "02ZW", "02BLM", "02BM2", "aBHLM"],
-                    "01WL": ["00BD", "02BM", "02ZW", "xMark"],
-                    "02BM2": ["00BD", "01WL", "02ZW", "02BLM", "02BM"],
-                    "02BLM": ["02BM", "02BM2", "02ZW"],
+                    "0_00BD": ["5_02BM", "3_01WL", "10_02ZW", "15_aBHLM", "6_02BM2"],
+                    "5_02BM": ["0_00BD", "3_01WL", "10_02ZW", "4_02BLM", "6_02BM2", "15_aBHLM"],
+                    "3_01WL": ["0_00BD", "5_02BM", "10_02ZW", "33_xMark"],
+                    "6_02BM2": ["0_00BD", "3_01WL", "10_02ZW", "4_02BLM", "5_02BM"],
+                    "4_02BLM": ["5_02BM", "6_02BM2", "10_02ZW"],
 
-                    "10LD": ["12LM"],
-                    "12LM": ["10LD", "12LLM", "aBHLM"],
-                    "12LLM": ["12LM"],
+                    "11_10LD": ["14_12LM"],
+                    "14_12LM": ["11_10LD", "13_12LLM", "15_aBHLM"],
+                    "13_12LLM": ["14_12LM"],
 
-                    "hHYB": ["hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
-                    "hHYH": ["hHYB", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
-                    "hHYP": ["hHYB", "hHYH", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
-                    "hHYQ": ["hHYB", "hHYH", "hHYP", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
-                    "hHYQ2": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
-                    "hHYS": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
-                    "hHYT": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYV", "hHYV2", "hHYW", "hHYX", "hHYO"],
-                    "hHYV": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV2", "hHYW", "hHYX", "hHYO"],
-                    "hHYV2": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYW", "hHYX", "hHYO"],
-                    "hHYW": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYX", "hHYO"],
-                    "hHYX": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYO"],
-                    "hHYO": ["hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS", "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX"]
+                    "17_hHYB": ["18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX", "hHYO"],
+                    "18_hHYH": ["17_hHYB", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX", "hHYO"],
+                    "19_hHYP": ["17_hHYB", "18_hHYH", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX", "hHYO"],
+                    "20_hHYQ": ["17_hHYB", "18_hHYH", "19_hHYP", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX", "hHYO"],
+                    "20_21_hHYQ2": ["17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "22_hHYS", "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX", "hHYO"],
+                    "22_hHYS": ["17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX", "hHYO"],
+                    "23_hHYT": ["17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX", "hHYO"],
+                    "24_hHYV": ["17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_25_hHYV2", "26_hHYW", "27_hHYX", "hHYO"],
+                    "24_25_hHYV2": ["17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_hHYV", "26_hHYW", "27_hHYX", "hHYO"],
+                    "26_hHYW": ["17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_hHYV", "24_25_hHYV2", "27_hHYX", "hHYO"],
+                    "27_hHYX": ["17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "hHYO"],
+                    "hHYO": ["17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS", "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX"]
                 },
                 "ok_ng_class": {
-                    "ok": ["01BHH", "01BL", "02CJ", "02DY", "02ZW", "aOK", "hHYB", "hHYH", "hHYP", "hHYQ", "hHYQ2", "hHYS",
-                           "hHYT", "hHYV", "hHYV2", "hHYW", "hHYX", "xDWF", "XFlag", "xKong", "xMark", "xMark2", "xMoer",
-                           "xPao", "xPao2"],
-                    "ng": ["00BD", "01WL", "02BLM", "02BM", "02BM2", "02DBBM", "10LD", "11LL", "12LLM", "12LM",
-                           "aBHLM", "xGZ", "xLYJ"]
+                    "ok": ["1_01BHH", "2_01BL", "7_02CJ", "9_02DY", "10_02ZW", "16_aOK", "17_hHYB", "18_hHYH", "19_hHYP", "20_hHYQ", "20_21_hHYQ2", "22_hHYS",
+                           "23_hHYT", "24_hHYV", "24_25_hHYV2", "26_hHYW", "27_hHYX", "28_xDWF", "29_XFlag", "31_xKong", "33_xMark", "34_33_xMark2", "35_xMoer",
+                           "36_xPao", "37_36_xPao2"],
+                    "ng": ["0_00BD", "3_01WL", "4_02BLM", "5_02BM", "6_02BM2", "8_02DBBM", "11_10LD", "12_11LL", "13_12LLM", "14_12LM",
+                           "15_aBHLM", "30_xGZ", "32_xLYJ"]
                 }
             }
+        }
         }
     }
 }
