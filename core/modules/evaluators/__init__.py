@@ -10,3 +10,6 @@ from .ClsEvaluator import ClsEvaluator
 
 # seg
 from .SegEvaluator import SegEvaluator
+
+# iqa
+from .IQAEvaluator import IQAEvaluator
