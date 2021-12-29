@@ -15,3 +15,6 @@ from .ClsDataloader import ClsDataloaderTrain, ClsDataloaderEval
 
 # segmentation
 from .SegDataloader import SegDataloaderTrain, SegDataloaderEval
+
+# iqa
+from .IQADataloader import IQADataloaderTrain, IQADataloaderEval
