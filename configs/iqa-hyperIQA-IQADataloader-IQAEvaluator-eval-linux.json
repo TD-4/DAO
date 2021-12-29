@@ -20,7 +20,7 @@
             "log_per_iter": 10
         },
 
-        "ckpt": "/root/code/DAO/saved/test-iqa-trainval-linux/12-28_18-40/best_ckpt.pth"
+        "ckpt": "/root/code/DAO/pretrained/data/iqa/best_ckpt.pth"
 
     },
     "model": {

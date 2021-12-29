@@ -29,7 +29,7 @@
             "target_fc4_size": 112,
             "feature_size": 7
         },
-        "ckpt": "/root/code/DAO/saved/test-iqa-trainval-linux/12-28_18-40/best_ckpt.pth"
+        "ckpt": "/root/code/DAO/pretrained/data/iqa/best_ckpt.pth"
     },
     "images": {
         "type": "images",

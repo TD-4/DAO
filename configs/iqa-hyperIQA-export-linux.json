@@ -29,12 +29,12 @@
             "target_fc4_size": 112,
             "feature_size": 7
         },
-        "ckpt": "/root/code/DAO/saved/test-iqa-trainval-linux/12-28_18-40/best_ckpt.pth"
+        "ckpt": "/root/code/DAO/pretrained/data/iqa/best_ckpt.pth"
     },
     "onnx": {
         "type": "",
         "x_size": [1, 30, 224, 224],
-        "onnx_path": "/root/code/iqa.onnx",
+        "onnx_path": "/root/code/DAO/pretrained/data/iqa/best_ckpt.onnx",
         "kwargs": {
             "export_params": true,
             "opset_version": 10,
