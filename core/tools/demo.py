@@ -29,5 +29,8 @@ def Demo(config, custom_modules):
     elif exp.type == 'anomaly':
         trainer = AnomalyDemo(exp)
         trainer.demo()
+    elif exp.type == 'iqa':
+        trainer = IQADemo(exp)
+        trainer.demo()
     else:
-        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly.".format(exp.type))
+        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly, iqa.".format(exp.type))

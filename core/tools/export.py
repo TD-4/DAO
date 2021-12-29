@@ -28,6 +28,9 @@ def Export(config=None, custom_modules=None):
     elif exp.type == 'anomaly':
         trainer = AnomalyExport(exp)
         trainer.export()
+    elif exp.type == 'iqa':
+        trainer = IQAExport(exp)
+        trainer.export()
     else:
-        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly.".format(exp.type))
+        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly, iqa.".format(exp.type))
 

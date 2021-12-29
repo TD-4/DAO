@@ -66,6 +66,9 @@ def main(exp, custom_modules):
     elif exp.type == 'anomaly':
         trainer = AnomalyEval(exp)
         trainer.eval()
+    elif exp.type == 'iqa':
+        trainer = IQAEval(exp)
+        trainer.eval()
     else:
-        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly.".format(exp.type))
+        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly, iqa.".format(exp.type))
 
