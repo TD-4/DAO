@@ -329,9 +329,10 @@ class IQAEval:
 
     def eval(self):
         self._before_eval()
-        self.evaluator.evaluate(self.model, get_world_size() > 1,
-                                device="cuda:{}".format(get_local_rank()),
-                                output_dir=self.output_dir)
+        top1, top2, confu_ma = self.evaluator.evaluate(self.model, get_world_size() > 1,
+                                                       device="cuda:{}".format(get_local_rank()),
+                                                       output_dir=self.output_dir)
+        logger.info("top1:{}, top2:{}, confu_ma:{}".format(top1, top2, confu_ma))
 
     def _before_eval(self):
         """
@@ -350,7 +351,7 @@ class IQAEval:
 
         logger.info("2. Model Setting ...")
         torch.cuda.set_device(get_local_rank())
-        model = Registers.cls_models.get(self.exp.model.type)(
+        model = Registers.iqa_models.get(self.exp.model.type)(
             self.exp.model.backbone,
             **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
@@ -384,11 +385,11 @@ class IQADemo:
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
 
         self.model = self._get_model()
-        self.images = self._get_images()  # ndarray
+        self.images, self.images_p = self._get_images()  # ndarray
 
     def _get_model(self):
         logger.info("model setting, on cpu")
-        model = Registers.cls_models.get(self.exp.model.type)(
+        model = Registers.iqa_models.get(self.exp.model.type)(
             self.exp.model.backbone,
             **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
@@ -399,37 +400,43 @@ class IQADemo:
         model.eval()
         return model
 
-    def _img_ok(self, img_p):
-        flag = False
-        for m in self.exp.images.image_ext:
-            if img_p.endswith(m):
-                flag = True
-        return flag
-
-    def _get_images(self):
+    def _get_images(self, num_level=10, image_channels=3):
         results = []
+        results_p = []
         all_paths = []
 
+        # get all images paths
         if self.exp.images.type == "image":
             all_paths.append(self.exp.images.path)
         elif self.exp.images.type == "images":
-            all_p = [p for p in os.listdir(self.exp.images.path) if self._img_ok(p)]
+            all_p = [p for p in os.listdir(self.exp.images.path)]
             for p in all_p:
                 all_paths.append(os.path.join(self.exp.images.path, p))
 
-        for img_p in all_paths:
-            image = np.array(Image.open(img_p))  # h,w
-            if len(image.shape) == 2:
-                image = np.expand_dims(image, axis=2)  # h,w,1
-            transform = get_transformer(self.exp.images.transforms.kwargs)
-            image = transform(image=image)['image']
-            image = image.transpose(2, 0, 1)  # c, h, w
-            results.append((img_p, image))
-        return results
+        # get all images
+        for imgs_p in all_paths:
+            images = []
+            # get one group images
+            for img_p in sorted([p for p in os.listdir(imgs_p) if p.endswith("bmp") or p.endswith("png") or p.endswith("jpg")]):
+                image = np.array(Image.open(os.path.join(imgs_p, img_p)))  # h,w
+                if len(image.shape) == 2:
+                    image = np.expand_dims(image, axis=2)  # h,w,1
+                transform = get_transformer(self.exp.images.transforms.kwargs)
+                image = transform(image=image)['image']
+                image = image.transpose(2, 0, 1)  # c, h, w
+                images.append(image)
+            while len(images) < num_level:
+                image = np.zeros((224, 224, image_channels), np.uint8)
+                image = image.transpose(2, 0, 1)  # c, h, w
+                images.append(image)
+            images = np.concatenate(images, 0)
+            results.append(images)
+            results_p.append(imgs_p)
+        return results, results_p
 
     def demo(self):
         results = []
-        for img_p, image in self.images:
+        for img_p, image in zip(self.images_p, self.images):
             image = torch.tensor(image).unsqueeze(0)  # 1, c, h, w
             output = self.model(image)
             top1_id = output.squeeze().cpu().detach().numpy().argmax()
@@ -448,7 +455,7 @@ class IQAExport:
 
     def _get_model(self):
         logger.info("model setting, on cpu")
-        model = Registers.cls_models.get(self.exp.model.type)(
+        model = Registers.iqa_models.get(self.exp.model.type)(
             self.exp.model.backbone,
             **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
