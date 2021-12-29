@@ -13,23 +13,32 @@
             "machine_rank": 0
         }
     },
-    "model": {
+     "model": {
         "type": "PSPNet",
-        "summary_size": [3,380,380],
-        "kwargs": {
-            "backbone": "resnet50",
-            "in_channels": 3,
-            "num_classes": 21,
-            "pretrained": true
+        "summary_size": [3,224,224],
+        "backbone": {
+            "kwargs": {
+                "model_name": "resnet50",
+                "pretrained": true,
+                "checkpoint_path": "",
+                "exportable": true,
+                "in_chans": 3,
+                "features_only": true
+            }
         },
-        "ckpt": "/root/code/DAO/saved/test-seg/12-10_15-49/best_ckpt.pth"
-
+        "kwargs": {
+            "encoder_channels": [3, 64, 256, 512, 1024, 2048],
+            "psp_out_channels": 512,
+            "num_classes": 21,
+            "upsampling": 32
+        },
+     "ckpt": "/root/code/DAO/saved/seg-PSPNet-sgd_warmup_bias_bn_weight-SegDataset-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux/best_ckpt.pth"
     },
 
     "images": {
         "type": "images",
         "image_ext": [".jpg", ".jpeg", ".bmp", ".png"],
-        "path": "/root/code/test/",
+        "path": "/root/code/seg_test/",
         "transforms": {
             "kwargs": {
                 "Resize":{"p": 1, "height":380, "width":380},
