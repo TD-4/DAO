@@ -1,0 +1,147 @@
+{
+    "name": "test-iqa-trainval-linux",
+    "type": "iqa",
+    "seed": 0,
+
+    "envs": {
+        "type": "linux",
+        "gpus": {
+            "dist_backend": "nccl",
+            "dist_url": null,
+            "devices": 1,
+            "num_machines": 1,
+            "machine_rank": 0
+        }
+    },
+    "trainer": {
+        "type": "trainerIQA",
+        "log": {
+            "log_dir": "/root/code/DAO/saved",
+            "log_per_iter": 10,
+            "eval_interval": 1
+        },
+
+        "warmup_epochs": 5,
+        "no_aug_epochs": 5,
+        "max_epochs": 200,
+
+        "ckpt": null,
+        "resume": false,
+
+        "amp": true,
+        "occupy": false,
+        "ema": true
+    },
+    "model": {
+        "type": "HyperNet",
+        "summary_size": [30,224,224],
+        "backbone": {
+            "kwargs": {
+                "model_name": "resnet50",
+                "pretrained": true,
+                "checkpoint_path": "",
+                "exportable": true,
+                "in_chans": 30,
+                "features_only": true,
+                "out_indices": [1, 2, 3, 4]
+            }
+        },
+        "kwargs": {
+            "num_classes": 10,
+            "encoder_channels": [30, 128, 256, 512, 1024, 2048],
+            "lda_out_channels": 128,
+            "hyper_in_channels": 896,
+            "target_in_size": 1792,
+            "target_fc1_size": 896,
+            "target_fc2_size": 448,
+            "target_fc3_size": 224,
+            "target_fc4_size": 112,
+            "feature_size": 7
+        }
+    },
+    "optimizer": {
+        "type": "sgd_warmup_bias_bn_weight",
+        "kwargs": {
+            "lr": 0.01,
+            "weight_decay": 1e-4,
+            "momentum": 0.9,
+            "warmup_lr": 0
+        }
+    },
+    "dataloader": {
+        "type": "IQADataloaderTrain",
+        "dataset": {
+            "type": "IQADataset",
+            "kwargs": {
+                "data_dir": "/root/data/DAO/old_hh",
+                "image_set": "train.txt",
+                "in_channels": 3,
+                "num_classes": 10,
+                "input_size": [224, 224],
+                "cache": false,
+                "image_suffix": ".bmp",
+                "separator": "_"
+            },
+            "transforms": {
+                "kwargs": {
+                    "Resize": {"p": 1, "height": 224, "width": 224, "interpolation": 0},
+                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+                }
+            }
+        },
+        "kwargs": {
+            "num_workers": 4,
+            "batch_size": 96
+        }
+    },
+    "loss": {
+        "type": "CrossEntropyLoss",
+        "kwargs": {
+            "ignore_index": 255,
+            "weight": [
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+            ],
+            "reduction": "mean"
+        }
+    },
+    "lr_scheduler": {
+        "type": "warm_cos_lr",
+        "kwargs": {
+            "warmup_epochs": 5,
+            "warmup_lr_start": 0
+        }
+    },
+    "evaluator": {
+        "type": "IQAEvaluator",
+        "dataloader": {
+            "type": "IQADataloaderEval",
+            "dataset": {
+            "type": "IQADataset",
+            "kwargs": {
+                "data_dir": "/root/data/DAO/old_hh",
+                "image_set": "val.txt",
+                "in_channels": 3,
+                "num_classes": 10,
+                "input_size": [224, 224],
+                "cache": false,
+                "image_suffix": ".bmp",
+                "separator": "_"
+            },
+            "transforms": {
+                "kwargs": {
+                    "Resize": {"p": 1, "height": 224, "width": 224, "interpolation": 0},
+                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+                }
+            }
+        },
+            "kwargs": {
+                "num_workers": 4,
+                "batch_size": 96
+            }
+        },
+        "kwargs": {
+            "num_classes": 10
+        }
+
+    }
+}
