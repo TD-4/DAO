@@ -27,7 +27,7 @@ class IQADataset(Dataset):
                  num_classes=10,
                  input_size=(224, 224),
                  cache=False,
-                 image_suffix=".jpg",
+                 image_suffix=".bmp",
                  separator="_"
                  ):
         """
@@ -99,9 +99,10 @@ class IQADataset(Dataset):
 
         # get image
         imgs = []
-        for i, img_p in enumerate(os.listdir(os.path.join(self.root, image_path))):
+        all_images_len = len(os.listdir(os.path.join(self.root, image_path)))
+        for i in range(all_images_len):
             image = None
-            name = str(i) + ".bmp"
+            img_p = os.path.join(self.root, image_path, str(i) + self.image_suffix)
             if self.in_channels == 1:
                 image = Image.open(os.path.join(self.root, image_path, img_p)).convert('L')
             elif self.in_channels == 3:
@@ -151,11 +152,13 @@ if __name__ == "__main__":
 
     transforms = get_transformer(kk["kwargs"])
     seg_d = IQADataset(
-        data_dir="/root/data/DAO/old_hh", preproc=transforms,  image_set="vallist.txt", in_channels=3,
+        data_dir="/root/data/DAO/old_hh", preproc=transforms,  image_set="val.txt", in_channels=3,
         num_classes=10,
         input_size=(224, 224), cache=False,  image_suffix=".bmp", separator = "_")
-    a, b, c = seg_d.__getitem__(2)
-    # print(a, np.unique(b), c)
-    print(c)
-    print(np.unique(b))
+    for i in range(10):
+        a, b, c = seg_d.__getitem__(i)
+        # print(a, np.unique(b), c)
+        print(c)
+        print(np.unique(b))
+        print()
 
