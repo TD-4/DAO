@@ -71,6 +71,7 @@ class Registers:
     seg_models = Register("seg_models")     # 分割模型
     det_models = Register("det_models")     # 目标检测模型
     anomaly_models = Register("anomaly_models")     # 异常检测模型
+    iqa_models = Register("iqa_models")     # 异常检测模型
     optims = Register("optim")              # 优化器
     datasets = Register("datasets")         # 数据集
     dataloaders = Register("dataloaders")   # 数据加载器
