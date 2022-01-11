@@ -37,22 +37,60 @@
 
 ### 2.1 组件支持
 
-- Models
+详细，请看API。
 
-  - Backbone
-    - 使用[timm](resources/timm_introduce.md)作为backbone
+#### 2.1.1 Models
 
-  - Segmentation
+- Backbone
+  - 使用[timm](resources/timm_introduce.md)作为backbone
+- Classification
+  - ResNets
+  - EfficientNets
+- Segmentation
+  - PSPNet
+  - UNet
+  - UNet++
+- Detection
+  - Yolox
+- Anomaly
+  - PaDiM
+  - CFlow-AD
+  - 
 
-  - Detection
+#### 2.1.2 DataLoader
 
-- DataLoader
+- DataSets
 
   - [MVTecDataset](resources/dataset_mvtecdataset.md)
 
-- loss
+  - ClsDataSet
+  - SegDataSet
 
-- ...
+- DataLoaders
+
+  - BatchDataLoader
+
+- Augments
+
+  - 
+
+#### 2.1.3 Losses
+
+- 
+
+#### 2.1.4 Optims
+
+- 
+
+#### 2.1.5 Schedulers
+
+- 
+
+#### 2.1.6 Evaluators
+
+- 
+
+
 
 ### 2.1 项目结构
 
@@ -222,13 +260,13 @@ root@c98fb50f30a8:~/code/DAO# tree
 
 ## 3. 如何使用
 
-### 3.1 分类（classification）
+### 3.1 Classification
 
 
 
-### 3.1 Detection 
+### 3.2 Detection 
 
-#### 3.1.1 Data Type
+#### 3.2.1 Data Type
 
 ##### 1. VOC
 
@@ -242,35 +280,31 @@ root@c98fb50f30a8:~/code/DAO# tree
 
 COCO Detection Type，参考[2.COCO](#####2. COCO数据集)数据集
 
-#### 3.1.2  Train
+#### 3.2.2  Train
 
 `CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/trainval/trainval.py -f configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json -d 2 -b 64 --fp16 -o --cache`
 
 > 备注：如果使用`CUDA_VISIBLE_DEVICES=4`， 最好将`-o`参数去掉
 
-#### 3.1.3 Eval
+#### 3.2.3 Eval
 
 `CUDA_VISIBLE_DEVICES=0,1 python tools/eval/evalDet.py -f configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json   -c  saved/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04/voc/best_ckpt.pth -b 16 -d 1 --conf 0.001 --fp16 --fuse`
 
-#### 3.1.4 Demo
+#### 3.2.4 Demo
 
 `CUDA_VISIBLE_DEVICES=0 python tools/demo/demoDet.py image -f configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json   -c  saved/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04/voc/best_ckpt.pth --path /root/code/AI/datasets/VOCdevkit/VOC2007/JPEGImages/ or dog.jpg --conf 0.2 --nms 0.5 --tsize 640 --save_result --device gpu`
 
-#### 3.4  Export
+#### 3.2.5  Export
 
 `CUDA_VISIBLE_DEVICES=0 python tools/export/export_onnx.py -f configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json   -c  saved/pretrained/yolox_voc/11-14_08-45/best_ckpt.pth --output-name saved/pretrained/yolox_voc/11-14_08-45/best_ckpt.onnx`
 
-#### 3.5  Deploy
-
-### 3.2 Classification
+#### 3.2.6  Deploy
 
 ### 3.3 Segmentation
 
 ### 3.4 IQA
 
+### 3.5 Anomaly
 
-
-### 3.5 FSL库使用
-
-### 3.6 双输入库使用
+### 3.6 FSL
 
