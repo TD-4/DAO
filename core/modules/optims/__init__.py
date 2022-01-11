@@ -1,2 +1,1 @@
 from .sgd_warmup_bias_bn_weight import sgd_warmup_bias_bn_weight
-from .sgd_warmup_backbone_head import sgd_warmup_backbone_head
