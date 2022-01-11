@@ -101,9 +101,70 @@ aux_params: Optional[dict] = None,
     }
 ```
 
+### 🍦UNet++
+
+[source](../core/modules/models/seg/unetplusplus/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/unetpp.md)
+
+**构造函数**
+
+```
+class UnetPlusPlus(SegmentationModel):
+    def __init__(
+        self,
+        encoder,
+        encoder_depth=5,
+        encoder_channels=None,
+        decoder_use_batchnorm: bool = True,
+        decoder_channels: List[int] = (256, 128, 64, 32, 16),
+        decoder_attention_type: Optional[str] = None,
+        num_classes=2,
+        activation: Optional[Union[str, callable]] = None,
+        aux_params: Optional[dict] = None,
+    ):
+    
+    encoder：CNN网络， 对应config中的backbone
+    encoder_depth: CNN的深度，即encoder_channels的长度
+    encoder_channels: CNN主干网络提取特征的通道数
+    decoder_use_batchnorm: 构建decoder网络时是否使用BN
+    decoder_channels：decoder时，输出的通道数
+    num_classes: 类别数， VOC（20fg+1bg)所以VOC数据集时num_classes设为21
+    activation: 构建decoder时，是否使用特定的激活函数
+    aux_params: 构建UNethical++的额外参数
+    
+```
+
+UnetPlusPlus通过`__init__`函数初始化，通过`forward`函数返回想要的值。
+
+**config**
+
+```
+ "model": {
+        "type": "UnetPlusPlus",
+        "summary_size": [3,224,224],
+        "backbone": {
+            "kwargs": {
+                "model_name": "tf_mobilenetv3_small_075",
+                "pretrained": true,
+                "checkpoint_path": "",
+                "exportable": true,
+                "in_chans": 3,
+                "features_only": true
+            }
+        },
+        "kwargs": {
+            "encoder_depth": 5,
+            "encoder_channels": [3, 16, 16, 24, 40, 432],
+            "decoder_channels": [256, 128, 64, 32, 16],
+            "num_classes": 21
+        }
+    }
+```
+
+![](models/imgs/20220111150339.jpg)
+
 ## 2. optims
 
-### sgd_warmup_bias_bn_weight
+### 🍔sgd_warmup_bias_bn_weight
 
 [source](../core/modules/optims/sgd_warmup_bias_bn_weight.py)
 
@@ -144,7 +205,7 @@ def sgd_warmup_bias_bn_weight(model=None,
 
 ## 3. datasets & dataloaders
 
-### SegDataset
+### 🍟SegDataset
 
 [source](../core/modules/dataloaders/datasets/SegDataset.py)
 
@@ -167,7 +228,7 @@ Class SegDataset(data_dir=None, preproc=None, image_set="", in_channels=1, input
     preproc:albumentations.Compose 对图片进行预处理
     cache:bool 是否对图片进行内存缓存
     images_suffix:str 可接受的图片后缀
-    mask_suffix:str
+    mask_suffix:str 可接受的图片后缀
 """
 ```
 
@@ -194,7 +255,7 @@ Class SegDataset(data_dir=None, preproc=None, image_set="", in_channels=1, input
 }
 ```
 
-### SegDataloaderTrain
+### 🥗SegDataloaderTrain
 
 [source](../core/modules/dataloaders/SegDataloader.py)
 
@@ -209,6 +270,13 @@ num_workers : int 读取数据线程数
 dataset : DotMap 数据集配置
 seed : int 随机种子
 """
+```
+
+返回类型
+
+```
+train_loader = DataPrefetcherSeg(train_loader)
+return train_loader, max_iter
 ```
 
 **configs.json**
@@ -241,7 +309,7 @@ seed : int 随机种子
     }
 ```
 
-### SegDataloaderEval
+### 🌭SegDataloaderEval
 
 [source](../core/modules/dataloaders/SegDataloader.py)
 
@@ -256,6 +324,15 @@ def SegDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, d
     dataset : DotMap 数据集配置
     """
 ```
+
+返回类型
+
+```
+val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
+return val_loader, len(val_loader)
+```
+
+
 
 **configs.json**
 
@@ -332,7 +409,7 @@ MVTecDataset(
 
 ## 4. losses
 
-### CrossEntropyLoss
+### 🍗CrossEntropyLoss
 
 [source](../core/modules/losses/CrossEntropyLoss.py)
 
@@ -362,7 +439,7 @@ def CrossEntropyLoss(weight=None, ignore_index=255, reduction='mean')
 
 ## 5. scheduler
 
-### warm_cos_lr
+### 🍖warm_cos_lr
 
 [source](../core/modules/schedulers/warm_cos_lr.py)
 
@@ -401,7 +478,7 @@ def update_lr(self, iters) 更新lr
 
 ## 6. evaluators
 
-### SegEvaluator
+### 🍘SegEvaluator
 
 [source](../core/modules/evaluators/SegEvaluator.py)
 
