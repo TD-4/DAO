@@ -13,7 +13,7 @@ from .AnomalyDataloader import MVTecDataloader
 # classification
 from .ClsDataloader import ClsDataloaderTrain, ClsDataloaderEval
 
-# segmentation
+# SemanticSegmentation
 from .SegDataloader import SegDataloaderTrain, SegDataloaderEval
 
 # iqa
