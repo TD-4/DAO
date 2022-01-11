@@ -3,6 +3,8 @@
 # @auther:FelixFu
 # @Date: 2021.10.1
 # @github:https://github.com/felixfu520
+# @Ref: https://github.com/Delta-ML/delta/blob/master/delta/utils/register.py
+# @Ref: https://applenob.github.io/python/register/
 
 """Module register."""
 
@@ -71,13 +73,14 @@ class Registers:
     seg_models = Register("seg_models")     # 分割模型
     det_models = Register("det_models")     # 目标检测模型
     anomaly_models = Register("anomaly_models")     # 异常检测模型
-    iqa_models = Register("iqa_models")     # 异常检测模型
+    iqa_models = Register("iqa_models")     # 图像质量评价模型
     optims = Register("optim")              # 优化器
     datasets = Register("datasets")         # 数据集
     dataloaders = Register("dataloaders")   # 数据加载器
     losses = Register("losses")             # 损失函数
     schedulers = Register("schedulers")     # 学习调整策略
     evaluators = Register("evaluators")     # 验证器
+    trainers = Register("trainers")         # 训练过程
 
 
 def import_all_modules_for_register(custom_modules=None):
@@ -94,6 +97,7 @@ def _register_core():
         "core.modules.models",
         "core.modules.optims",
         "core.modules.schedulers",
+        "core.trainers",
     ]
 
     for modules in all_modules:
