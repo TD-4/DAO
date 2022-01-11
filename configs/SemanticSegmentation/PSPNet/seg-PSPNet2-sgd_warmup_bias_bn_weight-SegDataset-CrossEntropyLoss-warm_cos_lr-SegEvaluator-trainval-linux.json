@@ -14,7 +14,7 @@
         }
     },
     "trainer": {
-        "type": "trainerSeg",
+        "type": "SegTrainer",
         "log": {
             "log_dir": "/root/code/DAO/saved",
             "log_per_iter": 10,

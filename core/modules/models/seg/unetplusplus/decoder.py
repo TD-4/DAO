@@ -27,8 +27,8 @@ class UnetPlusPlusDecoder(torch.nn.Module):
                 )
             )
 
-        encoder_channels = encoder_channels[1:]  # remove first skip with same spatial resolution
-        encoder_channels = encoder_channels[::-1]  # reverse channels to start from head of encoder
+        encoder_channels = encoder_channels[1:]  # remove first skip with same spatial resolution, [3, 16, 16, 24, 40, 432]->[16, 16, 24, 40, 432]
+        encoder_channels = encoder_channels[::-1]  # reverse channels to start from head of encoder, [16, 16, 24, 40, 432]->[432, 40, 24, 16, 16]
         # computing blocks input and output channels
         head_channels = encoder_channels[0]
         self.in_channels = [head_channels] + list(decoder_channels[:-1])

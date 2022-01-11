@@ -1,8 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# @Time    : 2021/11/22 13:41
-# @Author  : yangqiang
-# @Software: PyCharm
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+# @auther:FelixFu
+# @Date: 2021.10.1
+# @github:https://github.com/felixfu520
+# @Ref: https://github.com/qubvel/segmentation_models.pytorch
+# @Ref: https://github.com/qubvel/segmentation_models.pytorch/blob/master/segmentation_models_pytorch/decoders/unetplusplus/model.py
 
 from typing import Optional, Union, List
 from core.modules.models.seg.base import SegmentationModel, SegmentationHead, ClassificationHead
@@ -70,9 +72,10 @@ if __name__ == '__main__':
             }
         },
         "kwargs": {
-            "num_classes": 2,
-            "encoder_channels": [1, 16, 16, 24, 40, 432]
-
+            "encoder_depth": 5,
+            "encoder_channels": [3, 16, 16, 24, 40, 432],
+            "decoder_channels": [256, 128, 64, 32, 16],
+            "num_classes": 21
         }
     })
     x = torch.rand(8, 3, 256, 256)
@@ -80,10 +83,10 @@ if __name__ == '__main__':
 
     output = model(x)
     print(output.shape)
-    # model.eval()
-    # torch.onnx.export(model,
-    #                   x,
-    #                   "onnx_name.onnx",
-    #                   opset_version=9,
-    #                   input_names=["input"],
-    #                   output_names=["output"])
+    model.eval()
+    torch.onnx.export(model,
+                      x,
+                      "/root/code/onnx_name.onnx",
+                      opset_version=9,
+                      input_names=["input"],
+                      output_names=["output"])
