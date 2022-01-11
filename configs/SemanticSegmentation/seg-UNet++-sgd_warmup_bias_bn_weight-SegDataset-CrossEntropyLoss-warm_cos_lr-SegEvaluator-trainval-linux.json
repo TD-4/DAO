@@ -8,13 +8,13 @@
         "gpus": {
             "dist_backend": "nccl",
             "dist_url": null,
-            "devices": 1,
+            "devices": 2,
             "num_machines": 1,
             "machine_rank": 0
         }
     },
     "trainer": {
-        "type": "trainerSeg",
+        "type": "SegTrainer",
         "log": {
             "log_dir": "/root/code/DAO/saved",
             "log_per_iter": 10,
@@ -47,8 +47,8 @@
         },
         "kwargs": {
             "encoder_depth": 5,
-            "encoder_channels": [1, 16, 16, 24, 40, 432],
-            "decoder_channels": [256, 128, 64, 32, 16],
+            "encoder_channels": [3, 16, 16, 24, 40, 432],
+            "decoder_channels": [256, 128, 64, 32, 32],
             "num_classes": 21
         }
     },
@@ -70,7 +70,7 @@
                     "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
                     "image_set": "train.txt",
                     "in_channels": 3,
-                    "input_size": [380, 380],
+                    "input_size": [224, 224],
                     "cache": false,
                     "image_suffix":".jpg",
                     "mask_suffix":".png"
@@ -84,7 +84,7 @@
         },
         "kwargs": {
             "num_workers": 4,
-            "batch_size": 32
+            "batch_size": 64
         }
     },
     "loss": {
@@ -116,7 +116,7 @@
                     "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
                     "image_set": "val.txt",
                     "in_channels": 3,
-                    "input_size": [380, 380],
+                    "input_size": [224, 224],
                     "cache": false,
                     "image_suffix":".jpg",
                     "mask_suffix":".png"
@@ -130,7 +130,7 @@
             },
             "kwargs": {
                 "num_workers": 4,
-                "batch_size": 32
+                "batch_size": 64
             }
         }
 
