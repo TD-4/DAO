@@ -117,7 +117,7 @@ class MeterSegEval(object):
         labeled = (target > 0) * (target <= num_class)  # torch.Size([4, 380, 380]) True or False(原value是255的）; 即排除原255像素值的mask
         # 获得标注正确的像素个数，和所有标注的像素个数(除去255）
         correct, num_labeled = self._batch_pix_accuracy(predict, target, labeled)   # correct为预测正确个数， num_labeled为标签标注像素个数
-        # 获得predict与target的inter(21),union(21)
+        # 获得predict与target的inter(21 length),union(21)
         inter, union = self._batch_intersection_union(predict, target, num_class,  labeled)
         return [np.round(correct, 5), np.round(num_labeled, 5), np.round(inter, 5), np.round(union, 5)]
 

@@ -64,7 +64,7 @@ class SegEvaluator:
         if not is_main_process():
             return 0, 0, None
         else:
-            for o, t, p in zip(output_s, target_s, path_s):
+            for o, t, p in zip(output_s, target_s, path_s):  # output_s [(b,21,h,w), ..., ]
                 seg_metrics = self.meter.eval_metrics(o, t, self.num_classes)
                 self.meter.update_seg_metrics(*seg_metrics)
         # PRINT INFO

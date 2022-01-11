@@ -17,17 +17,18 @@ from torchsummary import summary
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 
-from core.modules import Registers
 from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
 from core.trainers.utils import (
     setup_logger, load_ckpt, save_checkpoint, occupy_mem,
     ModelEMA, EMA, is_parallel, gpu_mem_usage,
     get_palette, colorize_mask
 )
-from core.modules.utils import MeterSegTrain
+from core.modules.utils import MeterSegTrain, denormalization
 from core.modules.dataloaders.augments import get_transformer
+from core.modules.register import Registers
 
 
+@Registers.trainers.register
 class SegTrainer:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
@@ -61,7 +62,7 @@ class SegTrainer:
         8.Evaluator Setting;
         """
         self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
-            os.path.join(self.exp.trainer.log.log_dir, self.exp.name)   # , self.start_time
+            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"train_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")
@@ -152,6 +153,11 @@ class SegTrainer:
         iter_start_time = time.time()
 
         inps, targets, path = self.train_loader.next()
+        # show img and mask
+        # Image.fromarray(denormalization(inps[0].cpu().numpy(), [0.398993, 0.431193, 0.452234],
+        #                                 [0.285205, 0.273126, 0.276610])).save("/root/code/t.png")
+        # import cv2;cv2.imwrite("/root/code/t3.png",
+        #             np.expand_dims(np.where(targets[0].cpu().numpy() == 1, 255, 0).astype(np.uint8), axis=2))
         inps = inps.to(self.data_type)
         # targets = targets.to(self.data_type)
         targets.requires_grad = False
@@ -305,6 +311,7 @@ class SegTrainer:
         return self.epoch * self.max_iter + self.iter
 
 
+@Registers.trainers.register
 class SegEval:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
@@ -362,6 +369,7 @@ class SegEval:
         logger.info("Now Eval Start ......")
 
 
+@Registers.trainers.register
 class SegDemo:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
@@ -424,6 +432,7 @@ class SegDemo:
         return results
 
 
+@Registers.trainers.register
 class SegExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
