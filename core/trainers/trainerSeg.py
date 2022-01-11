@@ -211,7 +211,7 @@ class SegTrainer:
             time_str = "iter time:{:2f}, data time:{:2f}".format(self.train_metrics.batch_time.avg, self.train_metrics.data_time.avg)
 
             logger.info(
-                "{}, mem: {:.0f}Mb, {}, {}, lr: {:.3e}, ETA:{}".format(
+                "{}, mem: {:.0f}Mb, {}, {}, lr: {:.3e}, {}".format(
                     progress_str,
                     gpu_mem_usage(),
                     time_str,

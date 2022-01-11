@@ -442,7 +442,7 @@ class IQADemo:
             top1_id = output.squeeze().cpu().detach().numpy().argmax()
             top1_scores = np.exp(output.cpu().detach().numpy().squeeze().max()) / sum(
                                                                np.exp(output.cpu().detach().numpy().squeeze()))
-            logger.info("Image:{}\n pred:{}, and scores:{:4f}".format(img_p, top1_id, top1_scores))
+            logger.info("Image:{} pred:{}, and scores:{:4f}".format(img_p, top1_id, top1_scores))
             results.append((img_p, top1_id, top1_scores))
         return results
 
