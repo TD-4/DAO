@@ -35,6 +35,9 @@ class SegDataset(Dataset):
                 |- images
                     |-图片
                 |- masks
+                |- train.txt
+                |- val.txt
+                |- labels.txt
 
         image_set:str "train.txt or val.txt or test.txt"
         in_channels:int  输入图片的通道数，目前只支持1和3通道
@@ -272,9 +275,9 @@ if __name__ == "__main__":
     dataset_c = DotMap(dataset_c)
     transforms = get_transformer(dataset_c.transforms.kwargs)
     seg_d = SegDataset(preproc=transforms, **dataset_c.kwargs)
-    a, b, c = seg_d.__getitem__(2)
+    a, b, c = seg_d.__getitem__(1)
     # print(a, np.unique(b), c)
     print(c)
     print(np.unique(b))
 
-    print(np.unique(np.array(Image.open("/root/data/DAO/VOC2007_Seg/masks/000121.png"))))
+    print(np.unique(np.array(Image.open("/root/data/DAO/VOC2012_Seg_Aug/masks/2007_000039.png"))))
