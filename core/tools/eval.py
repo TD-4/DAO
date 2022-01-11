@@ -16,6 +16,7 @@ import torch.backends.cudnn as cudnn
 from core.utils import configure_nccl, configure_omp, get_num_devices
 from core.trainers import *
 from core.tools import register_modules
+from core.modules.register import Registers
 
 
 def Eval(config=None, custom_modules=None):
@@ -54,21 +55,6 @@ def main(exp, custom_modules):
 
     register_modules(custom_modules=custom_modules)   # 注册所有组件
 
-    if exp.type == "cls":
-        trainer = ClsEval(exp)
-        trainer.eval()
-    elif exp.type == 'seg':
-        trainer = SegEval(exp)
-        trainer.eval()
-    elif exp.type == 'det':
-        trainer = DetEval(exp)
-        trainer.eval()
-    elif exp.type == 'anomaly':
-        trainer = AnomalyEval(exp)
-        trainer.eval()
-    elif exp.type == 'iqa':
-        trainer = IQAEval(exp)
-        trainer.eval()
-    else:
-        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly, iqa.".format(exp.type))
-
+    logger.info("DAO support Cls/Det/Seg/Anomaly/IQAEval, And you can define custom Trainer")
+    trainer = Registers.trainers.get(exp.trainer.type)(exp)  # 调用
+    trainer.eval()

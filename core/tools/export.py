@@ -9,28 +9,14 @@ from dotmap import DotMap
 from loguru import logger
 
 from core.tools import register_modules
-from core.trainers import *
+from core.modules.register import Registers
 
 
 def Export(config=None, custom_modules=None):
     exp = DotMap(config)
-    register_modules(custom_modules=custom_modules)
+    register_modules(custom_modules=custom_modules)  # 注册所有组件
 
-    if exp.type == "cls":
-        trainer = ClsExport(exp)
-        trainer.export()
-    elif exp.type == "seg":
-        trainer = SegExport(exp)
-        trainer.export()
-    elif exp.type == 'det':
-        trainer = DetExport(exp)
-        trainer.export()
-    elif exp.type == 'anomaly':
-        trainer = AnomalyExport(exp)
-        trainer.export()
-    elif exp.type == 'iqa':
-        trainer = IQAExport(exp)
-        trainer.export()
-    else:
-        logger.error("this type {} is not supported, now supported cls, det, seg, anomaly, iqa.".format(exp.type))
+    logger.info("DAO support Cls/Det/Seg/Anomaly/IQAExport, And you can define custom Trainer")
+    trainer = Registers.trainers.get(exp.trainer.type)(exp)  # 调用
+    trainer.export()
 
