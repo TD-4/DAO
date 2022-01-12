@@ -14,7 +14,7 @@
         }
     },
     "trainer": {
-        "type": "trainerCls",
+        "type": "ClsTrainer",
         "log": {
             "log_dir": "/root/code/DAO/saved",
             "log_per_iter": 10,
