@@ -224,3 +224,39 @@ class ClsDataset(Dataset):
 
         logger.info("trainlist {} images, vallist {} images, total {} images".format(data_count[1], data_count[2], data_count[0]))
 
+
+if __name__ == "__main__":
+    from core.modules.dataloaders.augments import get_transformer
+    from dotmap import DotMap
+    from core.modules.utils import denormalization
+    from PIL import Image
+    import cv2
+
+    dataset_c = {
+        "type": "ClsDataset",
+        "kwargs": {
+            "data_dir": "/root/data/DAO/screen",
+            "image_set": "train.txt",
+            "in_channels": 1,
+            "input_size": [224, 224],
+            "cache": False,
+            "train_ratio": 0.9,
+            "shuffle": True,
+            "sample_range": [2000, 3000],
+            "images_suffix": [".bmp"]
+        },
+        "transforms": {
+            "kwargs": {
+                "histogram": {"p": 1},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+            }
+        }
+    }
+    dataset_c = DotMap(dataset_c)
+    transforms = get_transformer(dataset_c.transforms.kwargs)
+    seg_d = ClsDataset(preproc=transforms, **dataset_c.kwargs)
+    a, b, c = seg_d.__getitem__(1)
+    cv2.imwrite("/root/code/t1.jpg", denormalization(a, [0], [1]))
+    print(c)
+    print(b)
+
