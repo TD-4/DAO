@@ -18,14 +18,15 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 
-from core.modules import Registers
 from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
 from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel
 from core.modules.utils import MeterClsTrain, plot_confusion_matrix
 from core.trainers.utils import gpu_mem_usage
 from core.modules.dataloaders.augments import get_transformer
+from core.modules.register import Registers
 
 
+@Registers.trainers.register
 class ClsTrainer:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
@@ -317,10 +318,17 @@ class ClsTrainer:
         return self.epoch * self.max_iter + self.iter
 
 
+@Registers.trainers.register
 class ClsEval:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
+
+        # 因为ClsEval只支持单机单卡，且batchsize为1
+        assert exp.envs.gpus.devices == 1, "exp.envs.gpus.devices must 1, please set again "
+        assert exp.envs.gpus.num_machines == 1, "exp.envs.gpus.devices must 1, please set again "
+        assert exp.envs.gpus.machine_rank == 0, "exp.envs.gpus.devices must 0, please set again "
+        assert exp.evaluator.dataloader.kwargs.batch_size == 1, "exp.envs.gpus.devices must 1, please set again "
 
     def eval(self):
         self._before_eval()
@@ -364,7 +372,7 @@ class ClsEval:
         self.model = model
         self.model.eval()
 
-        logger.info("8. Evaluator Setting ... ")
+        logger.info("3. Evaluator Setting ... ")
         self.evaluator = Registers.evaluators.get(self.exp.evaluator.type)(
             is_distributed=get_world_size() > 1,
             dataloader=self.exp.evaluator.dataloader,
@@ -373,6 +381,7 @@ class ClsEval:
         logger.info("Now Eval Start ......")
 
 
+@Registers.trainers.register
 class ClsDemo:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
@@ -435,6 +444,7 @@ class ClsDemo:
         return results
 
 
+@Registers.trainers.register
 class ClsExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
