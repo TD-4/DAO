@@ -35,7 +35,7 @@ from loguru import logger
 from tqdm import tqdm
 
 import torch
-from torchcam.cams import SmoothGradCAMpp, CAM
+from torchcam.methods import SmoothGradCAMpp, CAM
 from torchcam.utils import overlay_mask
 import torch.nn.functional as F
 from torchvision.transforms.functional import normalize, resize, to_pil_image

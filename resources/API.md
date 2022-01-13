@@ -2,9 +2,35 @@
 
 ## 1. models
 
-### Backbones
+### 🍕Backbones
 
-[Pytorch视觉模型库--timm](./timm_introduce.md)
+[Pytorch视觉模型库--timm](./timm_introduce.md) | [source](../core/modules/models/backbone/TIMM.py)
+
+**构造函数**
+
+```
+def TIMM(backbone):
+    # 判断model是否在timm支持列表中
+    if backbone.kwargs.model_name not in timm.list_models():
+        logger.error("timm {} not supported {}".format(
+            timm.__version__,
+            backbone.kwargs.model_name))
+        raise
+
+    # 判断model是否有pretrained
+    if backbone.kwargs.pretrained and backbone.kwargs.model_name not in timm.list_models(pretrained=True):
+        logger.error("{} hasn't pretrained weight, please set pretrained False".format(
+            backbone.kwargs.model_name
+        ))
+        raise
+
+    model = timm.create_model(**backbone.kwargs)
+    return model
+
+backbone: dict 主干网络的配置参数
+```
+
+
 
 **configs.json**
 
@@ -23,7 +49,17 @@
 
 需要嵌入其他网络中使用
 
-### Classifications
+### 🍿Classifications
+
+[source](../core/modules/models/cls/TIMMC.py)
+
+**构造函数**
+
+```
+def TIMMC(backbone_kwargs):
+    backbone = Registers.backbones.get("TIMM")(backbone_kwargs)
+    return backbone
+```
 
 **configs.json**
 
@@ -365,6 +401,150 @@ return val_loader, len(val_loader)
         }
 ```
 
+### 🍳ClsDataset
+
+[source](../core/modules/dataloaders/datasets/ClsDataset.py)
+
+**构造函数**
+
+```
+class ClsDataset(Dataset):
+    def __init__(self, data_dir=None, image_set="", in_channels=1,
+                 input_size=(224, 224), preproc=None, cache=False,
+                 separator=":", train_ratio=0.9, shuffle=True,
+                 sample_range=(2000, 3000), images_suffix=None):
+                 
+   """
+        分类数据集
+
+        data_dir:str  数据集文件夹路径，文件夹要求是
+            |-dataset
+                |- 类别1
+                    |-图片
+                |- 类别2
+
+        image_set:str "train.txt or val.txt"
+        in_channels:int  输入图片的通道数，目前只支持1和3通道
+        input_size:tuple 输入图片的HW
+        preproc:albumentations.Compose 对图片进行预处理
+        cache:bool 是否对图片进行内存缓存
+        separator:str labels.txt id与name的分隔符
+        train_ratio:float 生成trianlist.txt的比例
+        shuffle:bool 生成train.txt时，folder中的数据是否随机打乱
+        sample_range:tuple 每类允许的最多图片数量的范围
+        images_suffix:list[str] 可接受的图片后缀
+  """
+```
+
+**configs**
+
+```
+"dataset": {
+                "type": "ClsDataset",
+                "kwargs": {
+                    "data_dir": "/root/data/DAO/screen",
+                    "image_set": "val.txt",
+                    "in_channels": 1,
+                    "input_size": [224, 224],
+                    "cache": false,
+                    "train_ratio": 0.9,
+                    "shuffle": true,
+                    "sample_range": [2000, 3000],
+                    "images_suffix": [".bmp"]
+                },
+                "transforms": {
+                    "kwargs": {
+                        "histogram": {"p": 1},
+                        "Normalize": {"mean": 0, "std": 1, "p": 1}
+                    }
+            }
+            },
+```
+
+### 🍛ClsDataloaderTrain
+
+[source](../core/modules/dataloaders/ClsDataloader.py)
+
+**构造函数**
+
+```
+def ClsDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0, **kwargs):
+```
+
+**configs**
+
+```
+ "dataloader": {
+        "type": "ClsDataloaderTrain",
+        "dataset": {
+            "type": "ClsDataset",
+            "kwargs": {
+                "data_dir": "/root/data/DAO/screen",
+                "image_set": "train.txt",
+                "in_channels": 1,
+                "input_size": [224, 224],
+                "cache": false,
+                "train_ratio": 0.9,
+                "shuffle": true,
+                "sample_range": [2000, 3000],
+                "images_suffix": [".bmp"]
+            },
+            "transforms": {
+                "kwargs": {
+                    "histogram": {"p": 1},
+                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+                }
+            }
+        },
+        "kwargs": {
+            "num_workers": 4,
+            "batch_size": 256
+        }
+    },
+```
+
+### 🥩ClsDataloaderEval
+
+[source](../core/modules/dataloaders/ClsDataloader.py)
+
+**构造函数**
+
+```
+def ClsDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, dataset=None, **kwargs):
+```
+
+**configs**
+
+```
+"dataloader": {
+    "type": "ClsDataloaderEval",
+    "dataset": {
+        "type": "ClsDataset",
+        "kwargs": {
+            "data_dir": "/root/data/DAO/screen",
+            "image_set": "val.txt",
+            "in_channels": 1,
+            "input_size": [224, 224],
+            "cache": false,
+            "train_ratio": 0.9,
+            "shuffle": true,
+            "sample_range": [2000, 3000],
+            "images_suffix": [".bmp"]
+        },
+        "transforms": {
+            "kwargs": {
+                "histogram": {"p": 1},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+            }
+    }
+    },
+    "kwargs": {
+        "num_workers": 4,
+        "batch_size": 256
+    }
+},
+```
+
 ### MVTecDataset
 
 ```
@@ -528,9 +708,56 @@ evaluate(self, model, distributed=False, half=False, device=None)
     }
 ```
 
+### 🍠ClsEvaluator
 
+[source](../core/modules/evaluators/ClsEvaluator.py)
 
+**构造函数**
 
+```
+class ClsEvaluator:
+    def __init__(self, is_distributed=False, dataloader=None, num_classes=None, is_industry=False, industry=None):
+```
 
+**configs**
 
+```
+"evaluator": {
+        "type": "ClsEvaluator",
+        "dataloader": {
+            "type": "ClsDataloaderEval",
+            "dataset": {
+                "type": "ClsDataset",
+                "kwargs": {
+                    "data_dir": "/root/data/DAO/screen",
+                    "image_set": "val.txt",
+                    "in_channels": 1,
+                    "input_size": [224, 224],
+                    "cache": false,
+                    "train_ratio": 0.9,
+                    "shuffle": true,
+                    "sample_range": [2000, 3000],
+                    "images_suffix": [".bmp"]
+                },
+                "transforms": {
+                    "kwargs": {
+                        "histogram": {"p": 1},
+                        "Normalize": {"mean": 0, "std": 1, "p": 1}
+                    }
+            }
+            },
+            "kwargs": {
+                "num_workers": 4,
+                "batch_size": 256
+            }
+        },
+        "kwargs": {
+            "num_classes": 38,
+            "is_industry": false
+        }
+
+    }
+```
+
+## 7. trainer
 
