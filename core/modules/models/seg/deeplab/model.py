@@ -6,9 +6,8 @@
 import torch.nn as nn
 
 from typing import Optional
-from .decoder import DeepLabV3Decoder, DeepLabV3PlusDecoder
-from ..base import SegmentationModel, SegmentationHead, ClassificationHead
-
+from core.modules.models.seg.base import SegmentationModel, SegmentationHead, ClassificationHead
+from core.modules.models.seg.deeplab.decoder import DeepLabV3Decoder, DeepLabV3PlusDecoder
 from core.modules.register import Registers
 
 
@@ -118,7 +117,7 @@ class DeepLabV3Plus(SegmentationModel):
             self,
             encoder=None,
             encoder_channels=None,
-            encoder_output_stride: int = 16,
+            encoder_output_stride: int = 32,
             decoder_channels: int = 256,
             decoder_atrous_rates: tuple = (12, 24, 36),
             num_classes: int = 1,
@@ -128,10 +127,10 @@ class DeepLabV3Plus(SegmentationModel):
     ):
         super().__init__()
 
-        if encoder_output_stride not in [8, 16]:
-            raise ValueError(
-                "Encoder output stride should be 8 or 16, got {}".format(encoder_output_stride)
-            )
+        # if encoder_output_stride not in [8, 16]:
+        #     raise ValueError(
+        #         "Encoder output stride should be 8 or 16, got {}".format(encoder_output_stride)
+        #     )
 
         self.encoder = Registers.backbones.get("TIMM")(encoder)
 
@@ -156,3 +155,74 @@ class DeepLabV3Plus(SegmentationModel):
             )
         else:
             self.classification_head = None
+
+if __name__ == '__main__':
+    import torch
+    from dotmap import DotMap
+    model_kwargs = DotMap({
+        "type": "DeepLabV3",
+        "summary_size": [1, 224, 224],
+        "backbone": {
+            "kwargs": {
+                "model_name": "resnet34",
+                "pretrained": True,
+                "checkpoint_path": "",
+                "exportable": True,
+                "in_chans": 3,
+                "features_only": True
+            }
+        },
+        "kwargs": {
+            "encoder_channels": [3, 64, 64, 128, 256, 512],
+            "decoder_channels": 256,
+            "num_classes": 21,
+            "upsampling": 4
+        }
+    })
+    x = torch.rand(8, 3, 256, 256)
+    model = DeepLabV3Plus(model_kwargs.backbone, **model_kwargs.kwargs)
+
+    output = model(x)
+    print(output.shape)
+    model.eval()
+    torch.onnx.export(model,
+                      x,
+                      "/root/code/onnx_name.onnx",
+                      opset_version=9,
+                      input_names=["input"],
+                      output_names=["output"])
+# if __name__ == '__main__':
+#     import torch
+#     from dotmap import DotMap
+#     model_kwargs = DotMap({
+#         "type": "DeepLabV3",
+#         "summary_size": [1, 224, 224],
+#         "backbone": {
+#             "kwargs": {
+#                 "model_name": "tf_mobilenetv3_small_075",
+#                 "pretrained": True,
+#                 "checkpoint_path": "",
+#                 "exportable": True,
+#                 "in_chans": 3,
+#                 "features_only": True
+#             }
+#         },
+#         "kwargs": {
+#             "encoder_channels": [3, 16, 16, 24, 40, 432],
+#             "decoder_channels": 256,
+#             "num_classes": 21,
+#             "upsampling": 32
+#         }
+#     })
+#     x = torch.rand(8, 3, 256, 256)
+#     model = DeepLabV3(model_kwargs.backbone, **model_kwargs.kwargs)
+#
+#     output = model(x)
+#     print(output.shape)
+#     model.eval()
+#     torch.onnx.export(model,
+#                       x,
+#                       "/root/code/onnx_name.onnx",
+#                       opset_version=9,
+#                       input_names=["input"],
+#                       output_names=["output"])

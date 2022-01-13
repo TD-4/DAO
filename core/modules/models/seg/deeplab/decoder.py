@@ -59,8 +59,8 @@ class DeepLabV3PlusDecoder(nn.Module):
         output_stride=16,
     ):
         super().__init__()
-        if output_stride not in {8, 16}:
-            raise ValueError("Output stride should be 8 or 16, got {}.".format(output_stride))
+        # if output_stride not in {8, 16}:
+        #     raise ValueError("Output stride should be 8 or 16, got {}.".format(output_stride))
 
         self.out_channels = out_channels
         self.output_stride = output_stride
@@ -72,7 +72,8 @@ class DeepLabV3PlusDecoder(nn.Module):
             nn.ReLU(),
         )
 
-        scale_factor = 2 if output_stride == 8 else 4
+        # scale_factor = 2 if output_stride == 8 else 4
+        scale_factor = output_stride // 4
         self.up = nn.UpsamplingBilinear2d(scale_factor=scale_factor)
 
         highres_in_channels = encoder_channels[-4]
