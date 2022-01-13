@@ -4,11 +4,8 @@
 # @GitHub:https://github.com/felixfu520
 # @Copy From:
 from typing import Optional, Union
-
-from .decoder import PSPDecoder
-
-from ..base import SegmentationModel
-from ..base import SegmentationHead, ClassificationHead
+from core.modules.models.seg.base import SegmentationModel, SegmentationHead, ClassificationHead
+from core.modules.models.seg.pspnet.decoder import PSPDecoder
 from core.modules.register import Registers
 
 
@@ -90,3 +87,50 @@ class PSPNet(SegmentationModel):
 
         self.name = "psp-{}".format(encoder.kwargs.model_name)
         self.initialize()
+
+
+if __name__ == '__main__':
+    import torch
+    from dotmap import DotMap
+    model_kwargs = DotMap({
+         "type": "PSPNet",
+        "summary_size": [3,224,224],
+        "backbone": {
+            "kwargs": {
+                "model_name": "resnet50",
+                "pretrained": True,
+                "checkpoint_path": "",
+                "exportable": True,
+                "in_chans": 3,
+                "features_only": True
+            }
+        },
+        "kwargs": {
+            "encoder_channels": [3, 64, 256, 512, 1024, 2048],
+            "psp_out_channels": 512,
+            "num_classes": 21,
+            "upsampling": 32
+        }
+    })
+    x = torch.rand(8, 3, 256, 256)
+    model = PSPNet(model_kwargs.backbone, **model_kwargs.kwargs)
+
+    output = model(x)
+    print(output.shape)
+    model.eval()
+    # TODO
+    # RuntimeError: Unsupported: ONNX export of operator adaptive_avg_pool2d,
+    # since output size is not factor of input size.
+    # Please feel free to request support or submit a pull request on PyTorch GitHub.
+    # 目前torch不支持adaptive_avg_pool2d操作，而PSPNet中用了这种操作，现在新的源码已经支持，但需要重新编译torch，所以等待wheel版本出来
+    # 后再说， 2022.1.13
+    torch.onnx.export(model,
+                      x,
+                      "/root/code/onnx_name.onnx",
+                      opset_version=13,
+                      export_params=True,
+                      do_constant_folding=True,
+                      verbose=True,
+                      input_names=["input"],
+                      output_names=["output"]
+    )
