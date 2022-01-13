@@ -1,21 +1,18 @@
 {
     "name": "cls-TIMMC-Export-linux",
     "type": "cls",
-    "info": {
-        "type": "cls",
-        "envs": "smsg",
-        "model": "TIMMC",
-        "backbone": "efficientnetb0",
-        "dataset": "screen",
-        "dataloader": "ClsDataloader",
-        "evaluator": "ClsEvaluator",
-        "trainer":"export",
-        "arch": "linux"
-    },
+
+    "trainer": {
+        "type": "ClsExport",
+        "log": {
+            "log_dir": "/root/code/DAO/saved",
+            "log_per_iter": 10
+        },
+        "ckpt": "/root/code/DAO/saved/cls-EfficientNet-sgd_warmup_bias_bn_weight-ClsDataset-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/smsg/best_ckpt.pth"
+},
     "model": {
         "type": "TIMMC",
         "summary_size": [1,224,224],
-        "ckpt": "/root/code/DAO/saved/cls-EfficientNet-sgd_warmup_bias_bn_weight-ClsDataset-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/smsg/best_ckpt.pth",
         "backbone": {
             "kwargs": {
                 "model_name":"efficientnet_b0",
@@ -32,7 +29,7 @@
     "onnx": {
         "type": "",
         "x_size": [1, 1, 224, 224],
-        "onnx_path": "/root/code/DAO/saved/t2.onnx",
+        "onnx_path": null,
         "kwargs": {
             "export_params": true,
             "opset_version": 10,

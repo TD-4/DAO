@@ -391,7 +391,6 @@ class ClsDemo:
         """
         1.Logger Setting
         2.Model Setting;
-        3.Evaluator Setting;
         """
         self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
             os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
@@ -461,9 +460,32 @@ class ClsExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
-        self.model = self._get_model()
 
-    def _get_model(self):
+    @logger.catch
+    def export(self):
+        self._before_export()
+
+        x = torch.randn(self.exp.onnx.x_size)
+        onnx_path = self.exp.onnx.onnx_path if self.exp.onnx.onnx_path else os.path.join(self.output_dir, self.exp.name+".onnx")
+        torch.onnx.export(self.model,
+                          x,
+                          onnx_path,
+                          **self.exp.onnx.kwargs)
+
+    def _before_export(self):
+        """
+        1.Logger Setting
+        2.Model Setting;
+        """
+        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
+            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"export_log.txt", mode="a")
+        logger.info("....... Train Before, Setting something ...... ")
+        logger.info("1. Logging Setting ...")
+        logger.info(f"create log file {self.output_dir}/export_log.txt")  # log txt
+        logger.info("exp value:\n{}".format(self.exp))
+
+        logger.info("2. Model Setting ...")
         logger.info("model setting, on cpu")
         model = Registers.cls_models.get(self.exp.model.type)(
             self.exp.model.backbone,
@@ -471,17 +493,6 @@ class ClsExport:
         logger.info("\n{}".format(model))  # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size),
                 device="{}".format(next(model.parameters()).device))  # log torchsummary model
-        ckpt = torch.load(self.exp.model.ckpt, map_location="cpu")["model"]
-        model = load_ckpt(model, ckpt)
-        model.eval()
-        return model
-
-    @logger.catch
-    def export(self):
-        x = torch.randn(self.exp.onnx.x_size)
-        onnx_path = self.exp.onnx.onnx_path
-        torch.onnx.export(self.model,
-                          x,
-                          onnx_path,
-                          **self.exp.onnx.kwargs)
-
+        ckpt = torch.load(self.exp.trainer.ckpt, map_location="cpu")["model"]
+        self.model = load_ckpt(model, ckpt)
+        self.model.eval()
