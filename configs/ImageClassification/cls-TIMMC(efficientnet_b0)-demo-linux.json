@@ -13,7 +13,6 @@
     "model": {
         "type": "TIMMC",
         "summary_size": [1,224,224],
-        "ckpt": "/root/code/DAO/saved/cls-EfficientNet-sgd_warmup_bias_bn_weight-ClsDataset-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/smsg/best_ckpt.pth",
         "backbone": {
             "kwargs": {
                 "model_name":"efficientnet_b0",
