@@ -2,40 +2,21 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Megvii, Inc. and its affiliates.
 
-import contextlib
-import io
-import itertools
-import json
-import tempfile
-import time
-from loguru import logger
-from tqdm import tqdm
-
-import torch
-
-from core.utils import is_main_process, synchronize, time_synchronized, gather
-from core.modules.register import Registers
-from core.modules.utils import MeterClsTrain
-
-
-import contextlib
-import io
+from copy import deepcopy
+from core.trainers.utils import is_parallel
 import os
 import cv2
-import itertools
-import json
 import numpy as np
 import shutil
 from PIL import Image
 import itertools
 import matplotlib.pyplot as plt
-import tempfile
 import time
 from loguru import logger
 from tqdm import tqdm
 
 import torch
-from torchcam.cams import SmoothGradCAMpp, CAM
+from torchcam.methods import SmoothGradCAMpp, CAM
 from torchcam.utils import overlay_mask
 import torch.nn.functional as F
 from torchvision.transforms.functional import normalize, resize, to_pil_image
@@ -47,7 +28,8 @@ from core.modules.register import Registers
 
 @Registers.evaluators.register
 class ClsEvaluator:
-    def __init__(self, is_distributed=False, dataloader=None, num_classes=None, is_industry=False, industry=None):
+    def __init__(self, is_distributed=False, dataloader=None, num_classes=None, is_industry=False, industry=None,
+                 target_layer="conv_head"):
         self.dataloader, self.iters_per_epoch = Registers.dataloaders.get(dataloader.type)(
             is_distributed=is_distributed,
             dataset=dataloader.dataset,
@@ -58,19 +40,33 @@ class ClsEvaluator:
         self.num_class = num_classes
         self.is_industry = is_industry
         self.industry = industry
+        self.target_layer = target_layer
+
+        # 获取labels字典
+        m = self.dataloader.dataset.labels_dict
+        self.labels_ = dict(zip(m.values(), m.keys()))
+        self.class_names = list(m.keys())
+        # 定义混淆矩阵
+        self.confusion_matrix = [[0 for j in range(num_classes)] for i in range(num_classes)]
+        self.pred_target_list = []  # 存放混淆矩阵中所用到的数据
+        self.pred_target_list_tolerate_count = {}  # 计算容忍混淆矩阵使用
 
     def evaluate(self, model, distributed=False, half=False, device=None, output_dir=None):
         tensor_type = torch.cuda.HalfTensor if half else torch.cuda.FloatTensor
-        model = model.eval()
         if half:
             model = model.half()
         data_list = []  # 存放最终的结果，多个gpu上汇集来的结果
         progress_bar = tqdm if is_main_process() else iter
+        cam_extractor = CAM(model, target_layer=self.target_layer)
 
         for imgs, targets, paths in progress_bar(self.dataloader):
             with torch.no_grad():
                 imgs = imgs.type(tensor_type)
                 outputs = model(imgs)
+                if self.is_industry:
+                    # 将img,his_img,cam_img拷贝到对应目录下，并记录预测的结果到self.pred_target_list和self.pred_target_list_tolerate_count
+                    self._industry(output_tensor=outputs, label=targets, output_dir=output_dir, img_p=paths[0],
+                                   cam_extractor=cam_extractor)
                 data_list.append((outputs, targets, paths))
 
         if distributed:
@@ -94,30 +90,67 @@ class ClsEvaluator:
         if not is_main_process():
             top1, top2, confu_ma = 0, 0, None
         else:
-            if self.is_industry:
-                self._industry(
-                    model=model,
-                    outputs=torch.cat([output.to(device=device) for output in output_s]),
-                    targets=torch.cat([output.to(device=device) for output in target_s]),
-                    paths=[p for path_ in path_s for p in path_],
-                    output_dir=output_dir
-                )
-                self.meter.update(
-                    outputs=torch.cat([output.to(device=device) for output in output_s]),
-                    targets=torch.cat([output.to(device=device) for output in target_s])
-                )
-                self.meter.eval_confusionMatrix(
-                    preds=torch.cat([output.to(device=device) for output in output_s]),
-                    labels=torch.cat([output.to(device=device) for output in target_s])
-                )
+            if self.is_industry:    # only eval
+                logger.info("\n预测的分数为scores，预测标签为pred， 实际标签为label\n"
+                            "1.当scores<阈值, 将结果放入validate/other目录下\n"
+                            "2.当scores>阈值, 且为过检， 将过检放到validate/gj目录下\n"
+                            "3.当scores>阈值, 且为漏检， 将漏检放到validate/lj目录下\n"
+                            "3.当scores>阈值, 且pred!=label, 且可容忍，将结果放入validate/tolerate目录下\n"
+                            "3.当scores>阈值, 且pred!=label, 且不可容忍，将结果放入validate/ng目录下\n"
+                            "4.当scores>阈值，且pred==label， 将结果放入validate/ok目录下\n"
+                            "总的图片 = other + ok + tolerate + ng")
+                logger.info("输出严格混淆矩阵")
+                for p, t in self.pred_target_list:  # (int,str)
+                    self.confusion_matrix[int(t)][p] += 1
+                self.plot_confusion_matrix(self.confusion_matrix, self.class_names, title="Confusion Matrix",
+                                           num_classes=self.num_class,
+                                           dst_path=os.path.join(output_dir, "validate", "cm.png"))
 
-                top1 = self.meter.precision_top1.avg
-                top2 = self.meter.precision_top2.avg
-                confu_ma = self.meter.confusion_matrix
-                self.meter.precision_top1.initialized = False
-                self.meter.precision_top2.initialized = False
-                self.meter.confusion_matrix = [[0 for j in range(self.num_class)] for i in range(self.num_class)]
-            else:
+                logger.info("输出可容忍混淆矩阵")
+                for k in list(self.pred_target_list_tolerate_count.keys()):
+                    if k in self.pred_target_list_tolerate_count.keys():
+                        p, t = k[0], k[1]  # int, int
+                        self.confusion_matrix[int(p)][p] += int(self.pred_target_list_tolerate_count[(p, t)])
+                        self.confusion_matrix[int(t)][p] -= int(self.pred_target_list_tolerate_count[(p, t)])
+                self.plot_confusion_matrix(self.confusion_matrix, self.class_names, title="Tolerate Confusion Matrix",
+                                           num_classes=self.num_class,
+                                           dst_path=os.path.join(output_dir, "validate", "cm_tolerate.png"))
+
+                # ----------------------------计算过检、漏检------------------------------------------------------------
+                total_len = len(self.pred_target_list)
+                gjc = 0  # 过检数量 pred NG -- target OK
+                ljc = 0  # 漏检数量 pred OK -- target NG
+                for pred_target in self.pred_target_list:  # pred_target_list.append((pred, label))  # 记录预测值和标签值，供计算混淆矩阵使用 (int,str)
+                    pred_, target_ = pred_target
+                    # 为每个预测和target标记OK或者NG
+                    pred_flag = "ok" if self.labels_[str(pred_)] in self.industry.kwargs.ok_ng_class.ok else "ng"
+                    target_flag = "ok" if self.labels_[str(target_)] in self.industry.kwargs.ok_ng_class.ok else "ng"
+                    if pred_flag == "ng" and target_flag == "ok":
+                        gjc += 1
+                    elif pred_flag == "ok" and target_flag == "ng":
+                        ljc += 1
+
+                gjl = float(gjc) / total_len  # 过检率
+                ljl = float(ljc) / total_len  # 漏检率
+
+                logger.info("过检率：{}\n漏检率：{}\n".format(gjl, ljl))
+                return
+                # self.meter.update(
+                #     outputs=torch.cat([output.to(device=device) for output in output_s]),
+                #     targets=torch.cat([output.to(device=device) for output in target_s])
+                # )
+                # self.meter.eval_confusionMatrix(
+                #     preds=torch.cat([output.to(device=device) for output in output_s]),
+                #     labels=torch.cat([output.to(device=device) for output in target_s])
+                # )
+                #
+                # top1 = self.meter.precision_top1.avg
+                # top2 = self.meter.precision_top2.avg
+                # confu_ma = self.meter.confusion_matrix
+                # self.meter.precision_top1.initialized = False
+                # self.meter.precision_top2.initialized = False
+                # self.meter.confusion_matrix = [[0 for j in range(self.num_class)] for i in range(self.num_class)]
+            else:   # for train and eval
                 self.meter.update(
                     outputs=torch.cat([output.to(device=device) for output in output_s]),
                     targets=torch.cat([output.to(device=device) for output in target_s])
@@ -137,8 +170,10 @@ class ClsEvaluator:
 
         return top1, top2, confu_ma
 
-    def _industry(self, model=None, outputs=None, targets=None, output_dir=None, paths=None):
+    def _industry(self, output_tensor=None, label=None, output_dir=None, img_p=None, cam_extractor=None):
+        """此函数主要是将原图、直方图拉伸、热力图拷贝到对应位置"""
         # path_ng + path_ok + path_other = all images
+        # 创建所需的文件夹
         path_ng = os.path.join(output_dir, "validate", "ng")  # scores >threshold, then label != pred
         path_ok = os.path.join(output_dir, "validate", "ok")  # scores >threshold, then label == pred
         path_other = os.path.join(output_dir, "validate", "other")  # scores < threshold
@@ -151,115 +186,57 @@ class ClsEvaluator:
         os.makedirs(path_tolerate, exist_ok=True)
         os.makedirs(path_gj, exist_ok=True)
         os.makedirs(path_lj, exist_ok=True)
-        m = self.dataloader.dataset.labels_dict
-        labels_ = dict(zip(m.values(), m.keys()))
-        class_names = list(m.keys())
-        # 定义混淆矩阵
-        num_classes = self.num_class
-        confusion_matrix = [[0 for j in range(num_classes)] for i in range(num_classes)]
-        pred_target_list = []  # 存放混淆矩阵中所用到的数据
-        pred_target_list_tolerate_count = {}  # 计算容忍混淆矩阵使用
-        logger.info("\n预测的分数为scores，预测标签为pred， 实际标签为label\n"
-                    "1.当scores<阈值, 将结果放入validate/other目录下\n"
-                    "2.当scores>阈值, 且为过检， 将过检放到validate/gj目录下\n"
-                    "3.当scores>阈值, 且为漏检， 将漏检放到validate/lj目录下\n"
-                    "3.当scores>阈值, 且pred!=label, 且可容忍，将结果放入validate/tolerate目录下\n"
-                    "3.当scores>阈值, 且pred!=label, 且不可容忍，将结果放入validate/ng目录下\n"
-                    "4.当scores>阈值，且pred==label， 将结果放入validate/ok目录下\n"
-                    "总的图片 = other + ok + tolerate + ng")
-        with torch.no_grad():
-            cam_extractor = CAM(model, target_layer="")
-            for output_tensor, label, img_p in zip(outputs, targets, paths):
-                label = str(label.cpu().numpy().item())
-                prediction = output_tensor.squeeze(0).cpu().detach().numpy()
-                prediction = F.softmax(torch.from_numpy(prediction), dim=0).argmax(0).cpu().numpy()
 
-                scores = F.softmax(output_tensor.squeeze(0), dim=0).cpu().numpy().max()  # top1 分数
-                pred = prediction.item()  # top1下标
+        # 获得label
+        label = str(label.cpu().numpy().item())
+        # 获得pred
+        prediction = output_tensor.squeeze(0).cpu().detach().numpy()
+        prediction = F.softmax(torch.from_numpy(prediction), dim=0).argmax(0).cpu().numpy()
+        scores = F.softmax(output_tensor.squeeze(0), dim=0).cpu().numpy().max()  # top1 分数
+        pred = prediction.item()  # top1下标
 
-                # 1、预测值小于阈值 --> 将图片、CAM、增强图放入other文件夹中
-                if scores < 0.3:
-                    self._copy_img_his_cam(labels_=labels_, pred=pred, label=label, scores=scores, img_p=img_p,
-                                           dst_path=path_ok, cam_extractor=cam_extractor, output_tensor=output_tensor)
-                    continue
+        self.pred_target_list.append((pred, label))  # 记录预测值和标签值，供计算混淆矩阵使用 (int,str)
 
-                pred_target_list.append((pred, label))  # 记录预测值和标签值，供计算混淆矩阵使用 (int,str)
-                # -----------------过检、漏检图片输出------------------------
-                pred_, target_ = pred, label
-                # 为每个预测和target标记OK或者NG
-                pred_flag = "ok" if labels_[str(pred_)] in self.industry.kwargs.ok_ng_class.ok else "ng"
-                target_flag = "ok" if labels_[str(target_)] in self.industry.kwargs.ok_ng_class.ok else "ng"
-                # 2. 过检--> 将图片、CAM、增强图放入gj文件夹中
-                if pred_flag == "ng" and target_flag == "ok":
-                    self._copy_img_his_cam(labels_=labels_, pred=pred, label=label, scores=scores, img_p=img_p,
-                                           dst_path=path_gj, cam_extractor=cam_extractor, output_tensor=output_tensor)
-                # 3. 漏检--> 将图片、CAM、增强图放入lj文件夹中
-                elif pred_flag == "ok" and target_flag == "ng":
-                    self._copy_img_his_cam(labels_=labels_, pred=pred, label=label, scores=scores, img_p=img_p,
-                                           dst_path=path_lj, cam_extractor=cam_extractor, output_tensor=output_tensor)
-                # ---------------过检、漏检图片输出--END----------------------------------
-
-                # 预测错误， 输出图片、CAM
-                if pred != int(label):
-                    # 2、可容忍的类别分错
-                    tolerate_class = self.industry.kwargs.tolerate_class
-                    if labels_[str(pred)] in tolerate_class.keys() and labels_[label] in tolerate_class[
-                        labels_[str(pred)]]:
-                        if (pred, int(label)) in pred_target_list_tolerate_count.keys():
-                            pred_target_list_tolerate_count[(pred, int(label))] += 1
-                        else:
-                            pred_target_list_tolerate_count[(pred, int(label))] = 1
-                        self._copy_img_his_cam(labels_=labels_, pred=pred, label=label, scores=scores, img_p=img_p,
-                                               dst_path=path_tolerate, cam_extractor=cam_extractor,
-                                               output_tensor=output_tensor)
-                    else:  # 3、不可容忍的类别分错
-                        self._copy_img_his_cam(labels_=labels_, pred=pred, label=label, scores=scores, img_p=img_p,
-                                               dst_path=path_ng, cam_extractor=cam_extractor,
-                                               output_tensor=output_tensor)
-                # 4、预测正确
+        # -----------------图片拷贝-----------------
+        # 1. 预测值小于阈值 --> 将图片、CAM、增强图放入other文件夹中
+        if scores < 0.3:
+            self._copy_img_his_cam(labels_=self.labels_, pred=pred, label=label, scores=scores, img_p=img_p,
+                                   dst_path=path_ok, cam_extractor=cam_extractor, output_tensor=output_tensor)
+        # 2. 预测错误， 输出图片、CAM
+        elif pred != int(label):
+            # 2.1 可容忍的类别分错
+            tolerate_class = self.industry.kwargs.tolerate_class
+            if self.labels_[str(pred)] in tolerate_class.keys() and self.labels_[label] in tolerate_class[self.labels_[str(pred)]]:
+                if (pred, int(label)) in self.pred_target_list_tolerate_count.keys():
+                    self.pred_target_list_tolerate_count[(pred, int(label))] += 1
                 else:
-                    self._copy_img_his_cam(labels_=labels_, pred=pred, label=label, scores=scores, img_p=img_p,
-                                           dst_path=path_ok, cam_extractor=cam_extractor,
-                                           output_tensor=output_tensor)
+                    self.pred_target_list_tolerate_count[(pred, int(label))] = 1
+                self._copy_img_his_cam(labels_=self.labels_, pred=pred, label=label, scores=scores, img_p=img_p,
+                                       dst_path=path_tolerate, cam_extractor=cam_extractor, output_tensor=output_tensor)
+            else:  # 2.2 不可容忍的类别分错
+                self._copy_img_his_cam(labels_=self.labels_, pred=pred, label=label, scores=scores, img_p=img_p,
+                                       dst_path=path_ng, cam_extractor=cam_extractor, output_tensor=output_tensor)
+        # 3. 预测正确
+        elif pred == int(label):
+            self._copy_img_his_cam(labels_=self.labels_, pred=pred, label=label, scores=scores, img_p=img_p,
+                                   dst_path=path_ok, cam_extractor=cam_extractor, output_tensor=output_tensor)
 
-        logger.info("输出严格混淆矩阵")
-        for p, t in pred_target_list:  # (int,str)
-            confusion_matrix[int(t)][p] += 1
-        self.plot_confusion_matrix(confusion_matrix, class_names, title="Confusion Matrix",
-                              num_classes=self.num_class,
-                              dst_path=os.path.join(output_dir, "validate", "cm.png"))
+        # -----------------过检、漏检图片输出------------------------
+        pred_, target_ = pred, label
+        # 为每个预测和target标记OK或者NG
+        pred_flag = "ok" if self.labels_[str(pred_)] in self.industry.kwargs.ok_ng_class.ok else "ng"
+        target_flag = "ok" if self.labels_[str(target_)] in self.industry.kwargs.ok_ng_class.ok else "ng"
+        # 1. 过检--> 将图片、CAM、增强图放入gj文件夹中
+        if pred_flag == "ng" and target_flag == "ok":
+            self._copy_img_his_cam(labels_=self.labels_, pred=pred, label=label, scores=scores, img_p=img_p,
+                                   dst_path=path_gj, cam_extractor=cam_extractor, output_tensor=output_tensor)
+        # 2. 漏检--> 将图片、CAM、增强图放入lj文件夹中
+        elif pred_flag == "ok" and target_flag == "ng":
+            self._copy_img_his_cam(labels_=self.labels_, pred=pred, label=label, scores=scores, img_p=img_p,
+                                   dst_path=path_lj, cam_extractor=cam_extractor, output_tensor=output_tensor)
 
-        logger.info("输出可容忍混淆矩阵")
-        for k in list(pred_target_list_tolerate_count.keys()):
-            if k in pred_target_list_tolerate_count.keys():
-                p, t = k[0], k[1]  # int, int
-                confusion_matrix[int(p)][p] += int(pred_target_list_tolerate_count[(p, t)])
-                confusion_matrix[int(t)][p] -= int(pred_target_list_tolerate_count[(p, t)])
-        self.plot_confusion_matrix(confusion_matrix, class_names, title="Tolerate Confusion Matrix",
-                              num_classes=self.num_class,
-                              dst_path=os.path.join(output_dir, "validate", "cm_tolerate.png"))
-
-        # ----------------------------计算过检、漏检------------------------------------------------------------
-        total_len = len(pred_target_list)
-        gjc = 0  # 过检数量 pred NG -- target OK
-        ljc = 0  # 漏检数量 pred OK -- target NG
-        for pred_target in pred_target_list:  # pred_target_list.append((pred, label))  # 记录预测值和标签值，供计算混淆矩阵使用 (int,str)
-            pred_, target_ = pred_target
-            # 为每个预测和target标记OK或者NG
-            pred_flag = "ok" if labels_[str(pred_)] in self.industry.kwargs.ok_ng_class.ok else "ng"
-            target_flag = "ok" if labels_[str(target_)] in self.industry.kwargs.ok_ng_class.ok else "ng"
-            if pred_flag == "ng" and target_flag == "ok":
-                gjc += 1
-            elif pred_flag == "ok" and target_flag == "ng":
-                ljc += 1
-
-        gjl = float(gjc) / total_len  # 过检率
-        ljl = float(ljc) / total_len  # 漏检率
-
-        logger.info("过检率：{}\n漏检率：{}\n".format(gjl, ljl))
-
-    def _copy_img_his_cam(self, labels_=None, pred=None, label=None, scores=None,
-                          img_p=None, dst_path=None, cam_extractor=None, output_tensor=None):
+    def _copy_img_his_cam(self, labels_=None, pred=None, label=None, scores=None, img_p=None,
+                          dst_path=None, cam_extractor=None, output_tensor=None):
         # 1. 拷贝图片
         output_name = "pred-{}__target-{}__{}__score-{}.bmp".format(labels_[str(pred)], labels_[label],
                                                                     str(time.time()).split('.')[0] +
@@ -280,21 +257,17 @@ class ClsEvaluator:
         image_his = np.uint8(255 / (B - A + 0.1) * (image - A) + 0.5)  # histogram图片 image_his
         cv2.imencode('.jpg', image_his)[1].tofile(os.path.join(dst_path, output_name))
 
-        # # 3.拷贝CAM图
-        # output_name = output_name[:-4] + ".png"
-        #
-        # activation_map = cam_extractor(output_tensor.cpu().squeeze(0).argmax().item(), output_tensor.cpu())
-        # result = overlay_mask(Image.open(img_p).convert("RGB"), to_pil_image(activation_map, mode='F'), alpha=0.5)
-        #
-        # cv2.imencode('.png', np.array(result)[:, :, ::-1])[1].tofile(
-        #     os.path.join(dst_path, output_name))
+        # 3.拷贝CAM图
+        output_name = output_name[:-4] + ".png"
 
-    def plot_confusion_matrix(self, cm, classes,
-                              normalize=False,
-                              title='Confusion matrix',
-                              cmap=plt.cm.Blues,
-                              num_classes=38,
-                              dst_path=None):
+        activation_map = cam_extractor(output_tensor.cpu().squeeze(0).argmax().item(), output_tensor.cpu())
+        result = overlay_mask(Image.open(img_p).convert("RGB"), to_pil_image(activation_map[0], mode='F'), alpha=0.5)
+
+        cv2.imencode('.png', np.array(result)[:, :, ::-1])[1].tofile(
+            os.path.join(dst_path, output_name))
+
+    def plot_confusion_matrix(self, cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues,
+                              num_classes=38, dst_path=None):
         """
         This function prints and plots the confusion matrix.
         Normalization can be applied by setting `normalize=True`.
