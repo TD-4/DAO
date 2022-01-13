@@ -2,6 +2,14 @@
     "name": "cls-TIMMC-Demo-linux",
     "type": "cls",
 
+    "trainer": {
+        "type": "ClsDemo",
+        "log": {
+            "log_dir": "/root/code/DAO/saved",
+            "log_per_iter": 10
+        },
+        "ckpt": "/root/code/DAO/saved/cls-EfficientNet-sgd_warmup_bias_bn_weight-ClsDataset-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/smsg/best_ckpt.pth"
+},
     "model": {
         "type": "TIMMC",
         "summary_size": [1,224,224],
@@ -22,7 +30,7 @@
     "images": {
         "type": "images",
         "image_ext": [".jpg", ".jpeg", ".bmp", ".png"],
-        "path": "/root/data/DAO/screen/0_00BD",
+        "path": "/root/code/DAO/resources/test/screen",
         "transforms": {
             "kwargs": {
                 "Resize":{"p": 1, "height":224, "width":224},

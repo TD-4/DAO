@@ -387,10 +387,21 @@ class ClsDemo:
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
 
-        self.model = self._get_model()
-        self.images = self._get_images()  # ndarray
+    def _before_demo(self):
+        """
+        1.Logger Setting
+        2.Model Setting;
+        3.Evaluator Setting;
+        """
+        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
+            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"demo_log.txt", mode="a")
+        logger.info("....... Train Before, Setting something ...... ")
+        logger.info("1. Logging Setting ...")
+        logger.info(f"create log file {self.output_dir}/demo_log.txt")  # log txt
+        logger.info("exp value:\n{}".format(self.exp))
 
-    def _get_model(self):
+        logger.info("2. Model Setting ...")
         logger.info("model setting, on cpu")
         model = Registers.cls_models.get(self.exp.model.type)(
             self.exp.model.backbone,
@@ -398,10 +409,9 @@ class ClsDemo:
         logger.info("\n{}".format(model))  # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size),
                 device="{}".format(next(model.parameters()).device))  # log torchsummary model
-        ckpt = torch.load(self.exp.model.ckpt, map_location="cpu")["model"]
-        model = load_ckpt(model, ckpt)
-        model.eval()
-        return model
+        ckpt = torch.load(self.exp.trainer.ckpt, map_location="cpu")["model"]
+        self.model = load_ckpt(model, ckpt)
+        self.model.eval()
 
     def _img_ok(self, img_p):
         flag = False
@@ -432,6 +442,8 @@ class ClsDemo:
         return results
 
     def demo(self):
+        self._before_demo()
+        self.images = self._get_images()  # ndarray
         results = []
         for img_p, image in self.images:
             image = torch.tensor(image).unsqueeze(0)  # 1, c, h, w
