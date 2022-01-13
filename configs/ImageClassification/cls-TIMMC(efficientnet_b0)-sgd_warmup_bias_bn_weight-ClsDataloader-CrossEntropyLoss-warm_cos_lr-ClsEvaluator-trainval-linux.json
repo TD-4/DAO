@@ -133,8 +133,7 @@
             }
         },
         "kwargs": {
-            "num_classes": 38,
-            "is_industry": false
+            "num_classes": 38
         }
 
     }

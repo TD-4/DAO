@@ -22,7 +22,7 @@
     "images": {
         "type": "images",
         "image_ext": [".jpg", ".jpeg", ".bmp", ".png"],
-        "path": "/root/data/ai_datasets/test",
+        "path": "/root/data/DAO/screen/0_00BD",
         "transforms": {
             "kwargs": {
                 "Resize":{"p": 1, "height":224, "width":224},

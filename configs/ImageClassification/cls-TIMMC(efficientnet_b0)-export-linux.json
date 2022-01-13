@@ -1,7 +1,17 @@
 {
     "name": "cls-TIMMC-Export-linux",
     "type": "cls",
-
+    "info": {
+        "type": "cls",
+        "envs": "smsg",
+        "model": "TIMMC",
+        "backbone": "efficientnetb0",
+        "dataset": "screen",
+        "dataloader": "ClsDataloader",
+        "evaluator": "ClsEvaluator",
+        "trainer":"export",
+        "arch": "linux"
+    },
     "model": {
         "type": "TIMMC",
         "summary_size": [1,224,224],
