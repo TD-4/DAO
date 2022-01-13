@@ -1,5 +1,5 @@
 {
-    "name": "cls-TIMMC-Export-linux",
+    "name": "cls-TIMMC(efficientnet_b0)-export-linux",
     "type": "cls",
 
     "trainer": {

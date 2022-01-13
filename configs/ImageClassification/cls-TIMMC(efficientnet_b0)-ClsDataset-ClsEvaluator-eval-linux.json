@@ -1,5 +1,5 @@
 {
-    "name": "cls-EfficientNet-ClsDataset-ClsEvaluator-trainval-linux",
+    "name": "cls-TIMMC(efficientnet_b0)-ClsDataset-ClsEvaluator-eval-linux",
     "type": "cls",
     "seed": 0,
 

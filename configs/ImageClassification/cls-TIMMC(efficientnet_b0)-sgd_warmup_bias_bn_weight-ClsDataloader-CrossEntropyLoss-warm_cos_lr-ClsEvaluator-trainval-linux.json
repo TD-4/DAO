@@ -1,5 +1,5 @@
 {
-    "name": "cls-EfficientNet-sgd_warmup_bias_bn_weight-ClsDataset-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux",
+    "name": "cls-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux",
     "type": "cls",
     "seed": 0,
 
