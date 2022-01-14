@@ -283,6 +283,10 @@ class PSPNet(SegmentationModel):
 
 ![](models/imgs/20220113145704.jpg)
 
+### 🍭Deeplab
+
+[source](../core/modules/models/seg/deeplab/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/pspnet.md)
+
 ## 2. optims
 
 ### 🍔sgd_warmup_bias_bn_weight
