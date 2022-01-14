@@ -1,0 +1,140 @@
+{
+    "name": "cls-envs(gpus)-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux",
+    "type": "cls",
+    "seed": 0,
+
+    "envs": {
+        "type": "linux",
+        "gpus": {
+            "dist_backend": "nccl",
+            "dist_url": null,
+            "devices": 2,
+            "num_machines": 1,
+            "machine_rank": 0
+        }
+    },
+    "trainer": {
+        "type": "ClsTrainer",
+        "log": {
+            "log_dir": "/root/code/DAO/saved",
+            "log_per_iter": 10,
+            "eval_interval": 1
+        },
+
+        "warmup_epochs": 5,
+        "no_aug_epochs": 5,
+        "max_epochs": 200,
+
+        "ckpt": null,
+        "resume": false,
+
+        "amp": true,
+        "occupy": false,
+        "ema": true
+    },
+    "model": {
+        "type": "TIMMC",
+        "summary_size": [1,224,224],
+        "backbone": {
+            "kwargs": {
+                "model_name":"efficientnet_b0",
+                "pretrained": true,
+                "checkpoint_path": "",
+                "exportable": true,
+                "in_chans": 1,
+                "num_classes": 38
+            }
+        },
+        "kwargs": {
+        }
+    },
+    "optimizer": {
+        "type": "sgd_warmup_bias_bn_weight",
+        "kwargs": {
+            "lr": 0.01,
+            "weight_decay": 1e-4,
+            "momentum": 0.9,
+            "warmup_lr": 0
+        }
+    },
+    "dataloader": {
+        "type": "ClsDataloaderTrain",
+        "dataset": {
+            "type": "ClsDataset",
+            "kwargs": {
+                "data_dir": "/root/data/DAO/screen",
+                "image_set": "train.txt",
+                "in_channels": 1,
+                "input_size": [224, 224],
+                "cache": false,
+                "train_ratio": 0.9,
+                "shuffle": true,
+                "sample_range": [2000, 3000],
+                "images_suffix": [".bmp"]
+            },
+            "transforms": {
+                "kwargs": {
+                    "histogram": {"p": 1},
+                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+                }
+            }
+        },
+        "kwargs": {
+            "num_workers": 4,
+            "batch_size": 256
+        }
+    },
+    "loss": {
+        "type": "CrossEntropyLoss",
+        "kwargs": {
+            "ignore_index": 255,
+            "weight": [
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1],
+            "reduction": "mean"
+        }
+    },
+    "lr_scheduler": {
+        "type": "warm_cos_lr",
+        "kwargs": {
+            "warmup_epochs": 5,
+            "warmup_lr_start": 0
+        }
+    },
+    "evaluator": {
+        "type": "ClsEvaluator",
+        "dataloader": {
+            "type": "ClsDataloaderEval",
+            "dataset": {
+                "type": "ClsDataset",
+                "kwargs": {
+                    "data_dir": "/root/data/DAO/screen",
+                    "image_set": "val.txt",
+                    "in_channels": 1,
+                    "input_size": [224, 224],
+                    "cache": false,
+                    "train_ratio": 0.9,
+                    "shuffle": true,
+                    "sample_range": [2000, 3000],
+                    "images_suffix": [".bmp"]
+                },
+                "transforms": {
+                    "kwargs": {
+                        "histogram": {"p": 1},
+                        "Normalize": {"mean": 0, "std": 1, "p": 1}
+                    }
+            }
+            },
+            "kwargs": {
+                "num_workers": 4,
+                "batch_size": 256
+            }
+        },
+        "kwargs": {
+            "num_classes": 38
+        }
+
+    }
+}
