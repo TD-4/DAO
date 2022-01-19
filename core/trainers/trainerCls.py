@@ -204,7 +204,7 @@ class ClsTrainer:
             topk_str = "top1:{:4f}, top2:{:4f}".format(self.train_metrics.precision_top1.avg, self.train_metrics.precision_top2.avg)
 
             logger.info(
-                "{}, {}, mem: {:.0f}Mb, {}, {}, lr: {:.3e}, ETA:{}".format(
+                "{}, {}, mem: {:.0f}Mb, {}, {}, lr: {:.3e}, {}".format(
                     progress_str,
                     topk_str,
                     gpu_mem_usage(),
@@ -363,6 +363,7 @@ class ClsEval:
 
         ckpt_file = self.exp.trainer.ckpt
         ckpt = torch.load(ckpt_file, map_location="cuda:{}".format(get_local_rank()))["model"]
+        # ckpt = torch.load(ckpt_file, map_location="cuda:{}".format(get_local_rank()))["state_dict"]
         model = load_ckpt(model, ckpt)
 
         logger.info("Model DDP Setting")
