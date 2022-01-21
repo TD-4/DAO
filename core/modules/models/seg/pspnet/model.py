@@ -57,7 +57,7 @@ class PSPNet(SegmentationModel):
         num_classes: int = 1,
         activation: Optional[Union[str, callable]] = None,
         upsampling: int = 8,
-        aux_params: Optional[dict] = None,
+        aux_params: Optional[dict] = None
     ):
         super().__init__()
 
@@ -79,9 +79,7 @@ class PSPNet(SegmentationModel):
         )
 
         if aux_params:
-            self.classification_head = ClassificationHead(
-                in_channels=encoder_channels[-1], **aux_params
-            )
+            self.classification_head = ClassificationHead(in_channels=encoder_channels[-1], stride=32, **aux_params)
         else:
             self.classification_head = None
 
@@ -109,15 +107,21 @@ if __name__ == '__main__':
             "encoder_channels": [3, 64, 256, 512, 1024, 2048],
             "psp_out_channels": 512,
             "num_classes": 21,
-            "upsampling": 32
+            "upsampling": 32,
+            "aux_params": {
+                "num_classes": 21,
+                "is_mask": True,
+                "mid_channels": 512
+            }
         }
     })
     x = torch.rand(8, 3, 256, 256)
     model = PSPNet(model_kwargs.backbone, **model_kwargs.kwargs)
 
     output = model(x)
-    print(output.shape)
+    # print(output.shape)
     model.eval()
+    output = model(x)
     # TODO
     # RuntimeError: Unsupported: ONNX export of operator adaptive_avg_pool2d,
     # since output size is not factor of input size.
