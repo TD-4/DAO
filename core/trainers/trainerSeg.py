@@ -98,6 +98,9 @@ class SegTrainer:
         logger.info("6. Loss Setting ... ")
         self.loss = Registers.losses.get(self.exp.loss.type)(**self.exp.loss.kwargs)
         self.loss.to(device="cuda:{}".format(get_local_rank()))
+        if "aux_params" in self.exp.model.kwargs:
+            self.loss_aux = Registers.losses.get(self.exp.aux_loss.type)(**self.exp.aux_loss.kwargs)
+            self.loss_aux.to(device="cuda:{}".format(get_local_rank()))
 
         logger.info("7. Scheduler Setting ... ")
         self.lr_scheduler = Registers.schedulers.get(self.exp.lr_scheduler.type)(
@@ -165,11 +168,11 @@ class SegTrainer:
 
         with torch.cuda.amp.autocast(enabled=self.exp.trainer.amp):    # 开启auto cast的context manager语义（model+loss）
             outputs = self.model(inps)
-            # loss = self.loss(outputs[0], targets)  # PSP损失
-            # loss += self.loss(outputs[1], targets) * 0.4  # FCN损失
-            # outputs = outputs[0]
-            loss = self.loss(outputs, targets)
-
+            if "aux_params" in self.exp.model.kwargs:
+                loss = self.loss(outputs[0], targets)  # PSP(master_branch)损失， 其他类似
+                loss += self.loss_aux(outputs[1], targets) * 0.4  # FCN损失
+            else:
+                loss = self.loss(outputs, targets)
         self.optimizer.zero_grad()   # 梯度清零
         self.scaler.scale(loss).backward()   # 反向传播；Scales loss. 为了梯度放大
         # scaler.step() 首先把梯度的值unscale回来.
