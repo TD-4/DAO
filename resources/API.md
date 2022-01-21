@@ -283,7 +283,7 @@ class PSPNet(SegmentationModel):
 
 ![](models/imgs/20220113145704.jpg)
 
-### 🍭Deeplab
+### Deeplab
 
 [source](../core/modules/models/seg/deeplab/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/pspnet.md)
 
