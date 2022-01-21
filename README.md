@@ -308,3 +308,7 @@ COCO Detection Type，参考[2.COCO](#####2. COCO数据集)数据集
 
 ### 3.6 FSL
 
+## Reference
+### Segmentation 参考
+- https://github.com/qubvel/segmentation_models.pytorch
+- https://github.com/yassouali/pytorch-segmentation
