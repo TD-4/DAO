@@ -23,9 +23,9 @@
 
         "warmup_epochs": 5,
         "no_aug_epochs": 5,
-        "max_epochs": 1000,
+        "max_epochs": 100,
 
-        "ckpt": "/root/code/DAO/saved/seg-UNet++-sgd_warmup_bias_bn_weight-SegDataset-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux/01-11_17-03/best_ckpt.pth",
+        "ckpt": null,
         "resume": false,
 
         "amp": true,

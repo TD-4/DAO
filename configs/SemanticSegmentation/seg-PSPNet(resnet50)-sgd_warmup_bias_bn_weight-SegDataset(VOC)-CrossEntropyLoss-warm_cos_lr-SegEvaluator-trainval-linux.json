@@ -8,7 +8,7 @@
         "gpus": {
             "dist_backend": "nccl",
             "dist_url": null,
-            "devices": 2,
+            "devices": 1,
             "num_machines": 1,
             "machine_rank": 0
         }
@@ -50,9 +50,10 @@
             "psp_out_channels": 512,
             "num_classes": 21,
             "upsampling": 32,
-            "aux_params_seg": {
-                "psp_out_channels": 512,
-                "num_classes": 21
+            "aux_params": {
+                "mid_channels": 512,
+                "num_classes": 21,
+                "is_mask": true
             }
         }
     },
@@ -93,7 +94,7 @@
         },
         "kwargs": {
             "num_workers": 8,
-            "batch_size": 64
+            "batch_size": 32
         }
     },
     "loss": {
@@ -151,7 +152,7 @@
             },
             "kwargs": {
                 "num_workers": 8,
-                "batch_size": 64
+                "batch_size": 32
             }
         }
 

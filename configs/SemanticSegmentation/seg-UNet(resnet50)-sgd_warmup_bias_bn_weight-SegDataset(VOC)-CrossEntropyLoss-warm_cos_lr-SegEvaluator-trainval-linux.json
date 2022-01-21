@@ -1,5 +1,5 @@
 {
-    "name": "seg-PSPNet2(resnet50)-sgd_warmup_bias_bn_weight-SegDataset(VOC)-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux",
+    "name": "seg-UNet(resnet50)-sgd_warmup_bias_bn_weight-SegDataset(VOC)-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux",
     "type": "seg",
     "seed": 0,
 
@@ -23,7 +23,7 @@
 
         "warmup_epochs": 5,
         "no_aug_epochs": 5,
-        "max_epochs": 80,
+        "max_epochs": 100,
 
         "ckpt": null,
         "resume": false,
@@ -33,16 +33,23 @@
         "ema": true
     },
     "model": {
-        "type": "PSPNet2",
+        "type": "Unet",
         "summary_size": [3,480,480],
         "backbone": {
             "kwargs": {
+                "model_name": "resnet50",
+                "pretrained": true,
+                "checkpoint_path": "",
+                "exportable": true,
+                "in_chans": 3,
+                "features_only": true
             }
         },
         "kwargs": {
-             "num_classes": 21,
-             "backbone": "resnet50",
-             "aux_params": {"type": "placeholder"}
+            "encoder_depth": 5,
+            "encoder_channels": [3, 64, 256, 512, 1024, 2048],
+            "decoder_channels": [256, 128, 64, 32, 32],
+            "num_classes": 21
         }
     },
     "optimizer": {
@@ -70,7 +77,7 @@
 	            },
             "transforms": {
                 "kwargs": {
-                    "Resize": {"height": 500, "width": 500, "p": 1},
+                   "Resize": {"height": 500, "width": 500, "p": 1},
                     "Flip": {"p": 0.5},
                     "Rotate": {"p": 0.5, "limit": [-10, 10]},
                     "Blur": {"p": 0.5, "blur_limit": [3,3]},
@@ -82,22 +89,10 @@
         },
         "kwargs": {
             "num_workers": 8,
-            "batch_size": 32
+            "batch_size": 16
         }
     },
     "loss": {
-        "type": "CrossEntropyLoss",
-        "kwargs": {
-            "ignore_index": 255,
-            "weight": [
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1
-            ],
-            "reduction": "mean"
-        }
-    },
-    "aux_loss": {
         "type": "CrossEntropyLoss",
         "kwargs": {
             "ignore_index": 255,
@@ -140,7 +135,7 @@
             },
             "kwargs": {
                 "num_workers": 8,
-                "batch_size": 32
+                "batch_size": 16
             }
         }
 
