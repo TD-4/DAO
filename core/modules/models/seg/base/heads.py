@@ -11,12 +11,20 @@ class SegmentationHead(nn.Sequential):
 
 
 class ClassificationHead(nn.Sequential):
-    def __init__(self, in_channels, classes, pooling="avg", dropout=0.2, activation=None):
-        if pooling not in ("max", "avg"):
-            raise ValueError("Pooling should be one of ('max', 'avg'), got {}.".format(pooling))
-        pool = nn.AdaptiveAvgPool2d(1) if pooling == "avg" else nn.AdaptiveMaxPool2d(1)
-        flatten = nn.Flatten()
-        dropout = nn.Dropout(p=dropout, inplace=True) if dropout else nn.Identity()
-        linear = nn.Linear(in_channels, classes, bias=True)
-        activation = Activation(activation)
-        super().__init__(pool, flatten, dropout, linear, activation)
+    def __init__(self, in_channels, classes, pooling="avg", dropout=0.2, activation=None, is_mask=True, mid_channels=512):
+        if is_mask:     # 使用mask作为辅助分支
+            conv1 = nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False)
+            bn1 = nn.BatchNorm2d(mid_channels)
+            r1 = nn.ReLU(inplace=True)
+            d1 = nn.Dropout2d(0.1)
+            conv2 = nn.Conv2d(mid_channels, classes, kernel_size=1)
+            super().__init__(conv1, bn1, r1, d1, conv2)
+        else:   # 使用分类作为辅助分支
+            if pooling not in ("max", "avg"):
+                raise ValueError("Pooling should be one of ('max', 'avg'), got {}.".format(pooling))
+            pool = nn.AdaptiveAvgPool2d(1) if pooling == "avg" else nn.AdaptiveMaxPool2d(1)
+            flatten = nn.Flatten()
+            dropout = nn.Dropout(p=dropout, inplace=True) if dropout else nn.Identity()
+            linear = nn.Linear(in_channels, classes, bias=True)
+            activation = Activation(activation)
+            super().__init__(pool, flatten, dropout, linear, activation)
