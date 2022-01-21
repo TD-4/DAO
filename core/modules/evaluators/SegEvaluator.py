@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 import torch
 
-from core.utils import is_main_process, synchronize, time_synchronized, gather
+from core.utils import is_main_process, synchronize, time_synchronized, gather, get_world_size
 from core.modules.register import Registers
 from core.modules.utils import MeterSegEval
 
@@ -28,7 +28,9 @@ class SegEvaluator:
         model = model.eval()
         if half:
             model = model.half()
-        data_list = []  # 用于存放all world size汇集的数据
+        pixAccs = []  # 用于存放all world size汇集的数据
+        mIoUs = []  # 用于存放all world size汇集的数据
+        Class_IoUs = []  # 用于存放all world size汇集的数据
 
         progress_bar = tqdm if is_main_process() else iter
 
@@ -39,36 +41,29 @@ class SegEvaluator:
                 targets = targets.to(device=device)
                 imgs = imgs.type(tensor_type)
                 outputs = model(imgs)
-                data_list.append((outputs, targets, paths)) # data_list:[([32, 21, 224, 224], [32, 21, 224, 224],[(image_p,...),(mask_p,...)]), ...]
+                seg_metrics = self.meter.eval_metrics(outputs, targets, self.num_classes)
+                self.meter.update_seg_metrics(*seg_metrics)
+
+        pixAcc, mIoU, Class_IoU = self.meter.get_seg_metrics().values()
 
         if distributed:  # 如果是分布式，将结果gather到0设备上
-            output_s = []   #
-            target_s = []
-            path_s = []
-            data_list = gather(data_list, dst=0)
-            # data_list [[([32, 21, 224, 224], [32, 21, 224, 224],[(image_p,...),(mask_p,...)]), ...], ..., N_gpus]
-            for data_ in data_list:     # multi gpu
-                for pred, target, path in data_:  # 每个gpu所具有的sample
-                    output_s.append(pred)  # [(16, 21, 224, 224), ...] 16为设定batchsize/ngpus
-                    target_s.append(target)  # [(16, 224, 224), ...]
-                    path_s.append(path)  # [(16个path, 16个path), ...]
-        else:
-            output_s = []
-            target_s = []
-            path_s = []
-            for o, t, p in data_list:  # data_list:[([32, 21, 224, 224], [32, 21, 224, 224],[(image_p,...),(mask_p,...)]), ...]
-                output_s.append(o)  # [[6, 21, 224, 224], ...]
-                target_s.append(t)  # [[6, 21, 224, 224], ...]
-                path_s.append(p)    # list[list of jpg, list of png]
+            pixAccs = gather(pixAcc, dst=0)
+            mIoUs = gather(mIoU, dst=0)
+            Class_IoUs = gather(Class_IoU, dst=0)
+            if is_main_process():
+                pixAcc = sum(pixAccs) / get_world_size()
+                mIoU = sum(mIoUs) / get_world_size()
+                Class_IoU = Class_IoUs[0]
+                for classiou in Class_IoUs[1:]:
+                    for k, v in Class_IoU.items():
+                        Class_IoU[k] += classiou[k]
+
+                for k, v in Class_IoU.items():
+                    Class_IoU[k] /= get_world_size()
 
         if not is_main_process():
             return 0, 0, None
-        else:
-            for o, t, p in zip(output_s, target_s, path_s):  # output_s [(b,21,h,w), ..., ]
-                seg_metrics = self.meter.eval_metrics(o, t, self.num_classes)
-                self.meter.update_seg_metrics(*seg_metrics)
-        # PRINT INFO
-        pixAcc, mIoU, Class_IoU = self.meter.get_seg_metrics().values()
+
         Class_IoU_dict = {}
         for k, v in Class_IoU.items():
             Class_IoU_dict[self.dataloader.dataset.labels_dict[str(k)]] = v
