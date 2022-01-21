@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 try:
     from inplace_abn import InPlaceABN
@@ -10,13 +9,13 @@ except ImportError:
 
 class Conv2dReLU(nn.Sequential):
     def __init__(
-            self,
-            in_channels,
-            out_channels,
-            kernel_size,
-            padding=0,
-            stride=1,
-            use_batchnorm=True,
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        padding=0,
+        stride=1,
+        use_batchnorm=True,
     ):
 
         if use_batchnorm == "inplace" and InPlaceABN is None:
@@ -65,7 +64,6 @@ class SCSEModule(nn.Module):
 
 
 class ArgMax(nn.Module):
-
     def __init__(self, dim=None):
         super().__init__()
         self.dim = dim
@@ -74,110 +72,60 @@ class ArgMax(nn.Module):
         return torch.argmax(x, dim=self.dim)
 
 
-class Activation(nn.Module):
+class Clamp(nn.Module):
+    def __init__(self, min=0, max=1):
+        super().__init__()
+        self.min, self.max = min, max
 
+    def forward(self, x):
+        return torch.clamp(x, self.min, self.max)
+
+
+class Activation(nn.Module):
     def __init__(self, name, **params):
 
         super().__init__()
 
-        if name is None or name == 'identity':
+        if name is None or name == "identity":
             self.activation = nn.Identity(**params)
-        elif name == 'sigmoid':
+        elif name == "sigmoid":
             self.activation = nn.Sigmoid()
-        elif name == 'softmax2d':
+        elif name == "softmax2d":
             self.activation = nn.Softmax(dim=1, **params)
-        elif name == 'softmax':
+        elif name == "softmax":
             self.activation = nn.Softmax(**params)
-        elif name == 'logsoftmax':
+        elif name == "logsoftmax":
             self.activation = nn.LogSoftmax(**params)
-        elif name == 'tanh':
+        elif name == "tanh":
             self.activation = nn.Tanh()
-        elif name == 'argmax':
+        elif name == "argmax":
             self.activation = ArgMax(**params)
-        elif name == 'argmax2d':
+        elif name == "argmax2d":
             self.activation = ArgMax(dim=1, **params)
+        elif name == "clamp":
+            self.activation = Clamp(**params)
         elif callable(name):
             self.activation = name(**params)
         else:
-            raise ValueError('Activation should be callable/sigmoid/softmax/logsoftmax/tanh/None; got {}'.format(name))
+            raise ValueError(
+                f"Activation should be callable/sigmoid/softmax/logsoftmax/tanh/"
+                f"argmax/argmax2d/clamp/None; got {name}"
+            )
 
     def forward(self, x):
         return self.activation(x)
 
 
 class Attention(nn.Module):
-
     def __init__(self, name, **params):
         super().__init__()
 
         if name is None:
             self.attention = nn.Identity(**params)
-        elif name == 'scse':
+        elif name == "scse":
             self.attention = SCSEModule(**params)
         else:
             raise ValueError("Attention {} is not implemented".format(name))
 
     def forward(self, x):
         return self.attention(x)
-
-
-class Flatten(nn.Module):
-    def forward(self, x):
-        return x.view(x.shape[0], -1)
-
-
-class DecoderBlock(nn.Module):
-    def __init__(
-            self,
-            in_channels,
-            skip_channels,
-            out_channels,
-            use_batchnorm=True,
-            attention_type=None,
-    ):
-        super().__init__()
-        self.conv1 = Conv2dReLU(
-            in_channels + skip_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1,
-            use_batchnorm=use_batchnorm,
-        )
-        self.attention1 = Attention(attention_type, in_channels=in_channels + skip_channels)
-        self.conv2 = Conv2dReLU(
-            out_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1,
-            use_batchnorm=use_batchnorm,
-        )
-        self.attention2 = Attention(attention_type, in_channels=out_channels)
-
-    def forward(self, x, skip=None):
-        x = F.interpolate(x, scale_factor=2, mode="nearest")
-        if skip is not None:
-            x = torch.cat([x, skip], dim=1)
-            x = self.attention1(x)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.attention2(x)
-        return x
-
-
-class CenterBlock(nn.Sequential):
-    def __init__(self, in_channels, out_channels, use_batchnorm=True):
-        conv1 = Conv2dReLU(
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1,
-            use_batchnorm=use_batchnorm,
-        )
-        conv2 = Conv2dReLU(
-            out_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1,
-            use_batchnorm=use_batchnorm,
-        )
-        super().__init__(conv1, conv2)
