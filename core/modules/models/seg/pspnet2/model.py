@@ -3,6 +3,7 @@
 # @Date: 2021.4.14
 # @GitHub:https://github.com/felixfu520
 # @Copy From:https://github.com/yassouali/pytorch-segmentation
+import torch
 import torch.nn.functional as F
 from torch import nn
 from core.modules.models.seg.pspnet2 import resnet
@@ -45,7 +46,7 @@ class _PSPModule(nn.Module):
 @Registers.seg_models.register
 class PSPNet2(nn.Module):
     def __init__(self, backbones=None, num_classes=21, in_channels=3, backbone='resnet152', pretrained=True, use_aux=True, freeze_bn=False,
-                 freeze_backbone=False):
+                 freeze_backbone=False, aux_params=None):
         super(PSPNet2, self).__init__()
         norm_layer = nn.BatchNorm2d
         model = getattr(resnet, backbone)(pretrained, norm_layer=norm_layer)
