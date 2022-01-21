@@ -16,7 +16,7 @@ class SegmentationModel(torch.nn.Module):
 
         masks = self.segmentation_head(decoder_output)   # 对解码后的特征做个卷积得到最后结果[batch_size, num_class, height, width]
 
-        if self.classification_head is not None:
+        if self.classification_head is not None and self.training:
             labels = self.classification_head(features[-1])
             return masks, labels
 
