@@ -11,10 +11,10 @@ class SegmentationModel(torch.nn.Module):
 
     def forward(self, x):
         """Sequentially pass `x` trough model`s encoder, decoder and heads"""
-        features = self.encoder(x)
-        decoder_output = self.decoder(*features)
+        features = [x, ] + self.encoder(x)  # backbone提取的不同层次的特征
+        decoder_output = self.decoder(*features)  # 解码后的特征，一般是[batch_size, c, height, width]，c是输出维度
 
-        masks = self.segmentation_head(decoder_output)
+        masks = self.segmentation_head(decoder_output)   # 对解码后的特征做个卷积得到最后结果[batch_size, num_class, height, width]
 
         if self.classification_head is not None:
             labels = self.classification_head(features[-1])
