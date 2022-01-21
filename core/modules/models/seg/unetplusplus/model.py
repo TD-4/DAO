@@ -60,10 +60,10 @@ if __name__ == '__main__':
     from dotmap import DotMap
     model_kwargs = DotMap({
         "type": "UnetPlusPlus",
-        "summary_size": [1, 224, 224],
+        "summary_size": [1, 256, 256],
         "backbone": {
             "kwargs": {
-                "model_name": "tf_mobilenetv3_small_075",
+                "model_name": "resnet50",
                 "pretrained": True,
                 "checkpoint_path": "",
                 "exportable": True,
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         },
         "kwargs": {
             "encoder_depth": 5,
-            "encoder_channels": [3, 16, 16, 24, 40, 432],
+            "encoder_channels": [3, 64, 256, 512, 1024, 2048],
             "decoder_channels": [256, 128, 64, 32, 16],
             "num_classes": 21
         }
