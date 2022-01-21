@@ -1,5 +1,5 @@
 {
-    "name": "seg-PSPNet(resnet50)-sgd_warmup_bias_bn_weight-SegDataset(VOC)-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux",
+    "name": "seg-PSPNet2(resnet50)-sgd_warmup_bias_bn_weight-SegDataset(VOC)-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux",
     "type": "seg",
     "seed": 0,
 
@@ -8,7 +8,7 @@
         "gpus": {
             "dist_backend": "nccl",
             "dist_url": null,
-            "devices": 2,
+            "devices": 1,
             "num_machines": 1,
             "machine_rank": 0
         }
@@ -23,9 +23,9 @@
 
         "warmup_epochs": 5,
         "no_aug_epochs": 5,
-        "max_epochs": 80,
+        "max_epochs": 800,
 
-        "ckpt": null,
+        "ckpt": "/root/code/DAO/saved/seg-PSPNet2(resnet50)-sgd_warmup_bias_bn_weight-SegDataset(VOC)-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux/01-17_13-58/best_ckpt.pth",
         "resume": false,
 
         "amp": true,
@@ -33,33 +33,21 @@
         "ema": true
     },
     "model": {
-        "type": "PSPNet",
+        "type": "PSPNet2",
         "summary_size": [3,480,480],
         "backbone": {
             "kwargs": {
-                "model_name": "resnet50",
-                "pretrained": true,
-                "checkpoint_path": "",
-                "exportable": true,
-                "in_chans": 3,
-                "features_only": true
             }
         },
         "kwargs": {
-            "encoder_channels": [3, 64, 256, 512, 1024, 2048],
-            "psp_out_channels": 512,
-            "num_classes": 21,
-            "upsampling": 32,
-            "aux_params_seg": {
-                "psp_out_channels": 512,
-                "num_classes": 21
-            }
+             "num_classes": 21,
+             "backbone": "resnet50"
         }
     },
     "optimizer": {
         "type": "sgd_warmup_bias_bn_weight",
         "kwargs": {
-            "lr": 0.01,
+            "lr": 0.001,
             "weight_decay": 1e-4,
             "momentum": 0.9,
             "warmup_lr": 0,
@@ -93,7 +81,7 @@
         },
         "kwargs": {
             "num_workers": 8,
-            "batch_size": 64
+            "batch_size": 32
         }
     },
     "loss": {
@@ -151,7 +139,7 @@
             },
             "kwargs": {
                 "num_workers": 8,
-                "batch_size": 64
+                "batch_size": 32
             }
         }
 
