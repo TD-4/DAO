@@ -117,7 +117,7 @@ class DeepLabV3Plus(SegmentationModel):
             self,
             encoder=None,
             encoder_channels=None,
-            encoder_output_stride: int = 32,
+            encoder_output_stride: int = 16,
             decoder_channels: int = 256,
             decoder_atrous_rates: tuple = (12, 24, 36),
             num_classes: int = 1,
@@ -127,10 +127,10 @@ class DeepLabV3Plus(SegmentationModel):
     ):
         super().__init__()
 
-        # if encoder_output_stride not in [8, 16]:
-        #     raise ValueError(
-        #         "Encoder output stride should be 8 or 16, got {}".format(encoder_output_stride)
-        #     )
+        if encoder_output_stride not in [8, 16]:
+            raise ValueError(
+                "Encoder output stride should be 8 or 16, got {}".format(encoder_output_stride)
+            )
 
         self.encoder = Registers.backbones.get("TIMM")(encoder)
 
@@ -156,6 +156,7 @@ class DeepLabV3Plus(SegmentationModel):
         else:
             self.classification_head = None
 
+
 if __name__ == '__main__':
     import torch
     from dotmap import DotMap
@@ -169,7 +170,9 @@ if __name__ == '__main__':
                 "checkpoint_path": "",
                 "exportable": True,
                 "in_chans": 3,
-                "features_only": True
+                "features_only": True,
+                "output_stride": 16
+
             }
         },
         "kwargs": {
@@ -199,19 +202,20 @@ if __name__ == '__main__':
 #         "summary_size": [1, 224, 224],
 #         "backbone": {
 #             "kwargs": {
-#                 "model_name": "tf_mobilenetv3_small_075",
+#                 "model_name": "resnet50",
 #                 "pretrained": True,
 #                 "checkpoint_path": "",
 #                 "exportable": True,
 #                 "in_chans": 3,
-#                 "features_only": True
+#                 "features_only": True,
+#                 "output_stride": 8
 #             }
 #         },
 #         "kwargs": {
-#             "encoder_channels": [3, 16, 16, 24, 40, 432],
+#             "encoder_channels": [3, 64, 256, 512, 1024, 2048],
 #             "decoder_channels": 256,
 #             "num_classes": 21,
-#             "upsampling": 32
+#             "upsampling": 8
 #         }
 #     })
 #     x = torch.rand(8, 3, 256, 256)
