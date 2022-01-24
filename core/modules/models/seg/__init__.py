@@ -9,3 +9,4 @@ from .unetplusplus import UnetPlusPlus
 from .pspnet import PSPNet
 from .pspnet2 import PSPNet2
 from .deeplab import DeepLabV3, DeepLabV3Plus
+from .deeplab2 import DeepLabV3Plus2
