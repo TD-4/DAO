@@ -236,3 +236,62 @@ class DataPrefetcherSeg:
     @staticmethod
     def _record_stream_for_image(input):
         input.record_stream(torch.cuda.current_stream())
+
+"""
+在读取每次数据喂给网络的时候，预读取下一次迭代需要的数据
+用于cpu-》gpu提速：
+默认情况下，pytorch将所有涉及到GPU的操作（比如内核操作，cpu->gpu, gpu->cpu)
+都排入同一个stream（default stream）中， 并对同一个流的操作序列化，他们永远不会并行。
+如果想并行，两个操作必须位于不同的stream中。
+而前向传播位于default stream中，要想将一个batch数据的预读取（涉及cpu->gpu) 与当前batch的前向传播并行处理，
+就必须：
+（1）cpu上的数据batch必须pinned；
+（2）预读取操作必须在另外一个stream上进行data prefetch。
+dataloader必须设置pin_memory=True来满足第一个条件
+"""
+class DataPrefetcherDet:
+    """
+    DataPrefetcher is inspired by code of following file:
+    https://github.com/NVIDIA/apex/blob/master/examples/imagenet/main_amp.py
+    It could speedup your pytorch dataloader. For more information, please check
+    https://github.com/NVIDIA/apex/issues/304#issuecomment-493562789.
+    """
+
+    def __init__(self, loader):
+        self.loader = iter(loader)
+        # CUDA流表示一个GPU操作队列，该队列中的操作将以添加到流中的先后顺序而依次执行
+        # 可以将一个流看作时GPU上的一个任务，不同的任务可以并行执行
+        self.stream = torch.cuda.Stream()
+        self.input_cuda = self._input_cuda_for_image
+        self.record_stream = DataPrefetcher._record_stream_for_image
+        self.preload()
+
+    def preload(self):
+        try:
+            self.next_input, self.next_target, _, _ = next(self.loader)
+        except StopIteration:
+            self.next_input = None
+            self.next_target = None
+            return
+
+        with torch.cuda.stream(self.stream):
+            self.input_cuda()
+            self.next_target = self.next_target.cuda(non_blocking=True)
+
+    def next(self):
+        torch.cuda.current_stream().wait_stream(self.stream)
+        input = self.next_input
+        target = self.next_target
+        if input is not None:
+            self.record_stream(input)
+        if target is not None:
+            target.record_stream(torch.cuda.current_stream())
+        self.preload()
+        return input, target
+
+    def _input_cuda_for_image(self):
+        self.next_input = self.next_input.cuda(non_blocking=True)
+
+    @staticmethod
+    def _record_stream_for_image(input):
+        input.record_stream(torch.cuda.current_stream())
