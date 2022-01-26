@@ -12,3 +12,6 @@ from .seg import Unet, UnetPlusPlus, DeepLabV3, DeepLabV3Plus, PSPNet, PSPNet2, 
 
 # iqa
 from .iqa import HyperNet
+
+# detection
+from .det import YOLOX
