@@ -312,3 +312,6 @@ COCO Detection Type，参考[2.COCO](#####2. COCO数据集)数据集
 ### Segmentation 参考
 - https://github.com/qubvel/segmentation_models.pytorch
 - https://github.com/yassouali/pytorch-segmentation
+  
+### Detection 参考
+- https://github.com/Megvii-BaseDetection/YOLOX
