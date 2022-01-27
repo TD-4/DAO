@@ -73,7 +73,7 @@
                 "type": "DetDataset",
                 "kwargs": {
                     "data_dir": "/root/data/DAO/COCO",
-                    "image_set": "val2017",
+                    "image_set": "train2017",
                     "in_channels": 3,
                     "input_size": [640, 640],
                     "cache": false,
