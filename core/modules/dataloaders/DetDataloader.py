@@ -10,14 +10,15 @@ import torch.multiprocessing
 from core.modules.register import Registers
 from core.modules.dataloaders.augments import get_transformer
 from core.modules.dataloaders.utils.dataloading import DataLoader, worker_init_reset_seed
-from core.modules.dataloaders.utils.samplers import InfiniteSampler, BatchSampler
+from core.modules.dataloaders.utils.samplers import InfiniteSampler, YoloBatchSampler
 from core.modules.dataloaders.utils.data_prefetcher import DataPrefetcherDet
 from core.utils import wait_for_the_master, get_local_rank, get_world_size
 from core.modules.dataloaders.augmentsTorch import TrainTransform, ValTransform
 
 
 @Registers.dataloaders.register
-def DetDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0):
+def DetDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None,
+                       seed=0, no_aug=False):
     """
     is_distributed : bool 是否是分布式
     batch_size : int batchsize大小
@@ -30,22 +31,26 @@ def DetDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, 
 
     # 多个rank读取VOCDetection
     with wait_for_the_master(local_rank):
-        dataset_Seg = Registers.datasets.get(dataset.type)(
-            preproc=TrainTransform(**dataset.transforms.kwargs),
-            **dataset.kwargs)
-
+        dataset_Det = Registers.datasets.get(dataset.dataset1.type)(
+            preproc=TrainTransform(**dataset.dataset1.transforms.kwargs),
+            **dataset.dataset1.kwargs)
+    dataset_Det = Registers.datasets.get(dataset.dataset2.type)(
+            dataset_Det,
+            preproc=TrainTransform(**dataset.dataset2.transforms.kwargs),
+            **dataset.dataset2.kwargs)
     # 如果是分布式，batch size需要改变
     if is_distributed:
         batch_size = batch_size // get_world_size()
 
     # 无限采样器
-    sampler = InfiniteSampler(len(dataset_Seg), seed=seed if seed else 0)
+    sampler = InfiniteSampler(len(dataset_Det), seed=seed if seed else 0)
 
     # batch sampler
-    batch_sampler = BatchSampler(
+    batch_sampler = YoloBatchSampler(
         sampler=sampler,
         batch_size=batch_size,
-        drop_last=False
+        drop_last=False,
+        mosaic=not no_aug,
     )
 
     # dataloader的kwargs配置
@@ -59,13 +64,14 @@ def DetDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, 
     # Check https://github.com/pytorch/pytorch/issues/63311 for more details.
     dataloader_kwargs["worker_init_fn"] = worker_init_reset_seed
 
-    train_loader = DataLoader(dataset_Seg, **dataloader_kwargs)
-    max_iter = len(train_loader)
-    logger.info("init prefetcher, this might take one minute or less...")
-    # to solve https://github.com/pytorch/pytorch/issues/11201
-    torch.multiprocessing.set_sharing_strategy('file_system')
-    train_loader = DataPrefetcherDet(train_loader)
-    return train_loader, max_iter
+    train_loader = DataLoader(dataset_Det, **dataloader_kwargs)
+    return train_loader
+    # max_iter = len(train_loader)
+    # logger.info("init prefetcher, this might take one minute or less...")
+    # # to solve https://github.com/pytorch/pytorch/issues/11201
+    # torch.multiprocessing.set_sharing_strategy('file_system')
+    # train_loader = DataPrefetcherDet(train_loader)
+    # return train_loader, max_iter
 
 
 @Registers.dataloaders.register

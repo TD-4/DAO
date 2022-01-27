@@ -18,3 +18,6 @@ from .SegDataloader import SegDataloaderTrain, SegDataloaderEval
 
 # iqa
 from .IQADataloader import IQADataloaderTrain, IQADataloaderEval
+
+# detection
+from .DetDataloader import DetDataloaderTrain, DetDataloaderEval

@@ -539,7 +539,7 @@ if __name__ == "__main__":
     dataset_c = DotMap(dataset_c)
     transforms = TrainTransform(**dataset_c.transforms.kwargs)
     seg_d = DetDataset(preproc=transforms, **dataset_c.kwargs)
-    a, b, c, d = seg_d.__getitem__(1)
+    a, b, c, d = seg_d.__getitem__(2491)    # id 109992
     cv2.imwrite("/root/code/t1.jpg", a.transpose(1, 2, 0))
 
     dataset_m = {
