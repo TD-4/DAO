@@ -143,7 +143,8 @@ class DetTrainer:
         self.evaluator = Registers.evaluators.get(self.exp.evaluator.type)(
             is_distributed=get_world_size() > 1,
             dataloader=self.exp.evaluator.dataloader,
-            num_classes=self.exp.model.kwargs.num_classes,
+            num_classes=self.exp.model.kwargs.head.num_classes,
+            **self.exp.evaluator.kwargs
         )
         self.train_metrics = MeterBuffer(window_size=self.exp.trainer.log.log_per_iter)
         self.best_acc = 0
@@ -155,7 +156,7 @@ class DetTrainer:
         :return:
         """
         logger.info("---> start train epoch{}".format(self.epoch + 1))
-        self.train_loader.close_mosaic()
+        # self.train_loader.close_mosaic()
 
         if self.epoch + 1 == self.max_epoch - self.exp.trainer.no_aug_epochs or self.no_aug:
             logger.info("--->No mosaic aug now!")
@@ -175,12 +176,8 @@ class DetTrainer:
     def _train_one_iter(self):
         iter_start_time = time.time()
 
-        # inps, targets, img_info, next_ids = self.prefetcher.next()
         inps, targets, img_info, next_ids = self.prefetcher.next()
-        # if next_ids.item() != 109992:
-        print("----{}".format(next_ids.item()))
-            # return
-        # print(next_ids)
+        # print("----{}".format(next_ids))
         inps = inps.to(self.data_type)
         targets = targets.to(self.data_type)
         targets.requires_grad = False
@@ -259,10 +256,10 @@ class DetTrainer:
 
         # random resizing
         # 每隔一定间隔，改变输出图片尺寸，并且保证多卡之间的图片尺寸相同
-        if (self.progress_in_iter + 1) % 10 == 0:
-            self.input_size = self.random_resize(
-                self.train_loader, self.epoch, get_rank(), get_world_size() > 1
-            )
+        # if (self.progress_in_iter + 1) % 10 == 0:
+        #     self.input_size = self.random_resize(
+        #         self.train_loader, self.epoch, get_rank(), get_world_size() > 1
+        #     )
 
     def _after_epoch(self):
         self._save_ckpt(ckpt_name="latest")
@@ -273,7 +270,7 @@ class DetTrainer:
 
     def _after_train(self):
         logger.info(
-            "Training of experiment is done and the best Acc is {:.2f}".format(self.best_acc)
+            "Training of experiment is done and the best AP is {:.2f}".format(self.best_acc)
         )
 
     def _evaluate_and_save_model(self):
@@ -284,18 +281,16 @@ class DetTrainer:
             if is_parallel(evalmodel):
                 evalmodel = evalmodel.module
 
-        pixAcc, mIoU, Class_IoU = self.evaluator.evaluate(evalmodel, get_world_size() > 1,
-                                        device="cuda:{}".format(get_local_rank()))
+        ap50_95, ap50, summary = self.evaluator.evaluate(evalmodel, get_world_size() > 1)
         self.model.train()
         if get_rank() == 0:
-            self.tblogger.add_scalar("val/pixAcc", pixAcc, self.epoch + 1)
-            self.tblogger.add_scalar("val/mIoU", mIoU, self.epoch + 1)
-            for k, v in Class_IoU.items():
-                self.tblogger.add_scalar("val/Class_IoU", v, self.epoch + 1)
+            self.tblogger.add_scalar("val/COCOAP50", ap50, self.epoch + 1)
+            self.tblogger.add_scalar("val/COCOAP50_95", ap50_95, self.epoch + 1)
+            logger.info("\n" + summary)
 
         synchronize()
-        self._save_ckpt("last_epoch", mIoU > self.best_acc)
-        self.best_acc = max(self.best_acc, mIoU)
+        self._save_ckpt("last_epoch", ap50_95 > self.best_acc)
+        self.best_acc = max(self.best_acc, ap50_95)
 
     def _save_ckpt(self, ckpt_name, update_best_ckpt=False):
         if get_rank() == 0:

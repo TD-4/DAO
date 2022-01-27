@@ -23,7 +23,7 @@
 
         "warmup_epochs": 5,
         "no_aug_epochs": 5,
-        "max_epochs": 100,
+        "max_epochs": 300,
 
         "ckpt": null,
         "resume": false,
@@ -112,7 +112,7 @@
         },
         "kwargs": {
             "num_workers": 8,
-            "batch_size": 1
+            "batch_size": 16
         }
     },
     "lr_scheduler": {
@@ -147,7 +147,11 @@
                 "num_workers": 8,
                 "batch_size": 16
             }
+        },
+        "kwargs": {
+            "img_size": [640, 640],
+            "confthre": 0.5,
+            "nmsthre": 0.5
         }
-
     }
 }
