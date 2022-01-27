@@ -20,6 +20,24 @@ from core.modules.dataloaders.augmentsTorch.data_augment_yolox import random_aff
 from core.modules.register import Registers
 
 
+def remove_useless_info(coco):
+    """
+    Remove useless info in coco dataset. COCO object is modified inplace.
+    This function is mainly used for saving memory (save about 30% mem).
+    """
+    if isinstance(coco, COCO):
+        dataset = coco.dataset
+        dataset.pop("info", None)
+        dataset.pop("licenses", None)
+        for img in dataset["images"]:
+            img.pop("license", None)
+            img.pop("coco_url", None)
+            img.pop("date_captured", None)
+            img.pop("flickr_url", None)
+        for anno in coco.dataset["annotations"]:
+            anno.pop("segmentation", None)
+
+
 class Dataset(torchDataset):
     """ This class is a subclass of the base :class:`torch.utils.data.Dataset`,
     that enables on the fly resizing of the ``input_dim``.
@@ -106,6 +124,7 @@ class DetDataset(Dataset):
         self.preproc = preproc
 
         self.coco = COCO(os.path.join(self.data_dir, self.image_set+".json"))
+        remove_useless_info(self.coco)
         self.ids = self.coco.getImgIds()
         self.class_ids = sorted(self.coco.getCatIds())
         cats = self.coco.loadCats(self.coco.getCatIds())
