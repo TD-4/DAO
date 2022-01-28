@@ -6,12 +6,10 @@
 # @Copy From:
 
 import json
-import os
-import sys
 from loguru import logger
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 添加 core库 到 sys.path 中
 from core.tools import TrainVal, Eval, Demo, Export
+
+__all__ = ['DAO']
 
 
 def DAO(exp_file, cus_file):

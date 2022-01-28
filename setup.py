@@ -1,6 +1,6 @@
 import os
 from setuptools import setup
-from core import DAO
+
 # 需要将那些包导入
 packages = ["core", "custom_modules"]
 
@@ -11,7 +11,8 @@ file_data = [
 
 # 第三方依赖
 requires = [
-    "numpy>=1.21.0"
+    "numpy>=1.21.0",
+    "torch>="
 ]
 
 # 自动读取version信息
