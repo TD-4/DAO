@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# Copyright (c) Megvii, Inc. and its affiliates.
+# -*- coding: utf-8 -*-
+# @Author:FelixFu
+# @Date: 2021.12.17
+# @GitHub:https://github.com/felixfu520
+# @Copy From:https://github.com/Megvii-BaseDetection/YOLOX/blob/main/yolox/core/trainer.py
 
 import os
 import time
@@ -18,9 +21,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 
 from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
-from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel
+from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel, gpu_mem_usage, get_palette, colorize_mask
 from core.modules.utils import MeterDetTrain, get_model_info, MeterBuffer
-from core.trainers.utils import gpu_mem_usage, get_palette, colorize_mask
 from core.modules.dataloaders.utils.data_prefetcher import DataPrefetcherDet
 from core.modules.dataloaders.augments import get_transformer
 
@@ -162,13 +164,13 @@ class DetTrainer:
             logger.info("--->No mosaic aug now!")
             self.train_loader.close_mosaic()
             logger.info("--->Add additional L1 loss now!")
-            if self.is_distributed:
+            if get_world_size() > 1:
                 self.model.module.head.use_l1 = True
             else:
                 self.model.head.use_l1 = True
             self.exp.trainer.log.eval_interval = 1
             if not self.no_aug:
-                self.save_ckpt(ckpt_name="last_mosaic_epoch")
+                self._save_ckpt(ckpt_name="last_mosaic_epoch")
 
     def _before_iter(self):
         pass
@@ -469,6 +471,7 @@ class DetTrainer:
         return self.epoch * self.max_iter + self.iter
 
 
+@Registers.trainers.register
 class DetEval:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
@@ -526,6 +529,7 @@ class DetEval:
         logger.info("Now Eval Start ......")
 
 
+@Registers.trainers.register
 class DetDemo:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
@@ -586,6 +590,7 @@ class DetDemo:
         return results
 
 
+@Registers.trainers.register
 class DetExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
