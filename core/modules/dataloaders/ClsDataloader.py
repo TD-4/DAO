@@ -110,3 +110,43 @@ def ClsDataloaderEval(
     return val_loader, len(val_loader)
     # return DataPrefetcherCls(val_loader), len(val_loader)
 
+
+if __name__ == "__main__":
+    from core.modules.dataloaders.augments import get_transformer
+    from dotmap import DotMap
+    from core.trainers.utils import denormalization
+    from core.modules.dataloaders.datasets import ClsDataset
+    from PIL import Image
+    import cv2
+    from core.modules.register import Registers
+
+    dataloader_c = {
+        "type": "ClsDataloaderTrain",
+        "dataset": {
+            "type": "ClsDataset",
+            "kwargs": {
+                "data_dir": "/root/data/DAO/screen",
+                "image_set": "train.txt",
+                "in_channels": 1,
+                "input_size": [224, 224],
+                "cache": True,
+                "images_suffix": [".bmp"]
+            },
+            "transforms": {
+                "kwargs": {
+                    # "histogram": {"p": 1},
+                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+                }
+            }
+        },
+        "kwargs": {
+            "num_workers": 4,
+            "batch_size": 256
+        }
+    }
+
+    dataloader_c = DotMap(dataloader_c)
+    dataloader_train, length = Registers.dataloaders.get("ClsDataloaderTrain")(
+        is_distributed=False, dataset=dataloader_c.dataset, **dataloader_c.kwargs)
+
+    print(dataloader_train, length)
