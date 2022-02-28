@@ -76,7 +76,20 @@ def ClsDataloaderTrain(
 
 
 @Registers.dataloaders.register
-def ClsDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, dataset=None, **kwargs):
+def ClsDataloaderEval(
+        is_distributed=False,
+        batch_size=None,
+        num_workers=None,
+        dataset=None,
+        **kwargs):
+    """
+    ClsDataset的dataloader类
+
+    is_distributed:bool 是否是分布式
+    batch_size: int batchsize大小，多个GPU的batchsize总和
+    num_workers:int 使用线程数
+    dataset:ClsDataset类 数据集类的实例
+    """
     valdataset = Registers.datasets.get(dataset.type)(
         preproc=get_transformer(dataset.transforms.kwargs),
         **dataset.kwargs
