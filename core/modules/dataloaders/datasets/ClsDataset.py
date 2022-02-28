@@ -4,11 +4,11 @@
 # @github:https://github.com/felixfu520
 
 import os
+import cv2
 import random
 import numpy as np
 from PIL import Image
 from loguru import logger
-import cv2
 
 import torch
 from torch.utils.data import Dataset
@@ -18,10 +18,15 @@ from core.modules.register import Registers
 
 @Registers.datasets.register
 class ClsDataset(Dataset):
-    def __init__(self, data_dir=None, image_set="", in_channels=1,
-                 input_size=(224, 224), preproc=None, cache=False,
-                 separator=":", train_ratio=0.9, shuffle=True,
-                 sample_range=(2000, 3000), images_suffix=None):
+    def __init__(self,
+                 data_dir=None,
+                 image_set="",
+                 in_channels=1,
+                 input_size=(224, 224),
+                 preproc=None,
+                 cache=False,
+                 separator=":",
+                 images_suffix=None):
         """
         分类数据集
 
@@ -30,40 +35,38 @@ class ClsDataset(Dataset):
                 |- 类别1
                     |-图片
                 |- 类别2
+                |- ......
+                |- train.txt
+                |- val.txt
+                |- test.txt
+                |- labels.txt
 
-        image_set:str "train.txt or val.txt"
+        image_set:str "train.txt", "val.txt" or "test.txt"
         in_channels:int  输入图片的通道数，目前只支持1和3通道
         input_size:tuple 输入图片的HW
         preproc:albumentations.Compose 对图片进行预处理
         cache:bool 是否对图片进行内存缓存
-        separator:str labels.txt id与name的分隔符
-        train_ratio:float 生成trianlist.txt的比例
-        shuffle:bool 生成train.txt时，folder中的数据是否随机打乱
-        sample_range:tuple 每类允许的最多图片数量的范围
+        separator:str labels.txt, train.txt, val.txt, test.txt 的分割符（name与id）
         images_suffix:list[str] 可接受的图片后缀
         """
-        if images_suffix is None:
-            images_suffix = [".bmp"]
+        # 属性赋值
         self.root = data_dir
         self.image_set = image_set
         self.in_channels = in_channels
         self.img_size = input_size
         self.preproc = preproc
+        if images_suffix is None:
+            self.images_suffix = [".bmp"]
 
+        # 设置ids，获得所有文件列表
         self.ids = []
-        self.labels = list()
-        self.labels_dict = dict()
+        self.labels_dict = dict()   # name:id形式
 
-        # 将Folder格式数据集 转为 TXT格式数据集
-        split_txt = os.path.join(data_dir, image_set) if (data_dir is not None and image_set is not None) else None
-        if not os.path.exists(split_txt):
-            logger.info("generate dataset  in '{}' folder labels.txt,train.txt,val.txt".format(data_dir))
-            self._gen_label_txt(data_dir)
-            self._gen_trainvallist(data_dir, train_ratio=train_ratio, shuffle=shuffle, suffix=images_suffix,
-                                   sample_range=sample_range)
-        else:
-            self._get_label_dict(data_dir, separator=separator)
-        self._set_ids(separator=separator)  # 获取所有文件的路径和标签，存放到files中
+        # 获取ids和label dict
+        self._set_ids(separator=separator)  # 获取所有文件的路径和标签，存放到files中. (img_path, label_id)
+        self._get_label_dict(data_dir, separator=separator)  # 设置labels， name:id
+
+        # cache 过程
         self.imgs = None
         if cache:
             self._cache_images()
@@ -85,9 +88,9 @@ class ClsDataset(Dataset):
                 img = np.expand_dims(img.copy(), axis=2)
             elif self.in_channels == 3:
                 img = img.copy()
-        label = torch.from_numpy(np.array(self.labels[index], dtype=np.int32)).long()
-        # label = np.array(self.labels[index], dtype=np.int32)
-        return img, label, self.ids[index]
+        label = torch.from_numpy(np.array(self.ids[index][1], dtype=np.int32)).long()   # torch.array形式
+        # label = np.array(self.labels[index], dtype=np.int32)  # numpy.array形式
+        return img, label, self.ids[index][0]
 
     def _load_resize_img(self, index):
         img = self._load_img(index)
@@ -99,7 +102,7 @@ class ClsDataset(Dataset):
         :param index:
         :return:
         """
-        image_path = self.ids[index]
+        image_path = self.ids[index][0]
         img = None
         if self.in_channels == 1:
             img = Image.open(image_path).convert('L')
@@ -120,7 +123,8 @@ class ClsDataset(Dataset):
         )
         max_h = self.img_size[0]
         max_w = self.img_size[1]
-        cache_file = self.root + "/img_resized_cache.array"
+        cache_file = os.path.join(self.root, "img_resized_cache_{}.array".format(self.image_set[:-4]))
+
         if not os.path.exists(cache_file):
             logger.info("Caching images for the frist time. This might take sometime")
             # np.memmap为存储在磁盘上的二进制文件中的数组创建内存映射。
@@ -139,7 +143,7 @@ class ClsDataset(Dataset):
                 lambda x: self._load_resize_img(x),
                 range(len(self.ids)),
             )
-            pbar = tqdm(enumerate(loaded_images), total=len(self.labels))
+            pbar = tqdm(enumerate(loaded_images), total=len(self.ids))
             for k, out in pbar:
                 if self.in_channels == 1:
                     self.imgs[k][: out.shape[0], : out.shape[1], :] = np.expand_dims(out.copy(), axis=2)
@@ -162,14 +166,24 @@ class ClsDataset(Dataset):
 
     def _set_ids(self, separator=" "):
         """
-        功能：获取所有文件的文件名和标签
+        功能：获取所有文件的文件名和标签, 放到self.ids中（img_path, label_id)
         """
         list_path = os.path.join(self.root, self.image_set)
 
         with open(list_path, 'r', encoding='utf-8') as images_labels:
             for image_label in images_labels:
-                self.ids.append(os.path.join(self.root, image_label.strip().split(separator)[0]))
-                self.labels.append(image_label.strip().split(separator)[1])
+                img_name = os.path.join(self.root, image_label.strip().split(separator)[0])
+                label_id = image_label.strip().split(separator)[1]
+                self.ids.append((img_name, label_id))
+
+    def _get_label_dict(self, data_dir, separator=":"):
+        """
+        获得label dict数组， name:id形式
+        """
+        label_txt = os.path.join(data_dir, "labels.txt")
+        with open(label_txt, "r", encoding='utf-8') as labels_file:
+            for name_id in labels_file.readlines():
+                self.labels_dict[name_id.strip().split(separator)[0]] = name_id.strip().split(separator)[1]
 
     def __len__(self):
         return len(self.ids)
@@ -179,50 +193,6 @@ class ClsDataset(Dataset):
         fmt_str += "    # data: {}\n".format(self.__len__())
         fmt_str += "    # Root: {}".format(self.root)
         return fmt_str
-
-    def _gen_label_txt(self, data_dir):
-        label_txt = os.path.join(data_dir, "labels.txt")
-        all_folder = [p for p in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, p))]  # 文件夹下所有文件
-        all_folder.sort()
-        with open(label_txt, "a+") as labels_file:
-            for i, folder in enumerate(all_folder):
-                labels_file.write("{}:{}\n".format(folder, i))
-                self.labels_dict[folder] = i
-
-    def _get_label_dict(self, data_dir, separator=":"):
-        label_txt = os.path.join(data_dir, "labels.txt")
-        with open(label_txt, "r") as labels_file:
-            for name_id in labels_file.readlines():
-                self.labels_dict[name_id.strip().split(separator)[0]] = name_id.strip().split(separator)[1]
-
-    def _gen_trainvallist(self, data_dir, train_ratio=0.9, shuffle=True, suffix=None, sample_range=(2000, 3000)):
-        suffix = [".bmp"] if shuffle is None else suffix
-        all_folders = [folder for folder in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, folder))]
-        all_folders.sort()
-        train_labels = os.path.join(data_dir, "train.txt")
-        val_labels = os.path.join(data_dir, "val.txt")
-        data_count = [0, 0, 0]  # class_one:[n_total, len(train_list), len(val_list)] + ...
-        with open(train_labels, "a+") as train_file, open(val_labels, "a+") as val_file:
-            for folder in all_folders:  # 处理每个文件夹
-                label = self.labels_dict[str(folder)]  # 获取标签
-
-                all_images = [img_p for img_p in os.listdir(os.path.join(data_dir, folder)) if img_p[-4:] in suffix]
-                n_total = min(random.randint(sample_range[0], sample_range[1]), len(all_images))  # 控制每类样本数量
-                offset = int(n_total * train_ratio)
-                train_list = all_images[:offset]  # 训练集图片路径
-                val_list = all_images[offset:n_total]  # 验证集图片路径
-                logger.info("class '{}', train set {} images, val set {} images".format(str(folder), len(train_list), len(val_list)))
-                tmp = [n_total, len(train_list), len(val_list)]
-                data_count = [d[0] + d[1] for d in zip(tmp, data_count)]
-                if shuffle:
-                    random.shuffle(all_images)
-                # 写入训练和测试图片路径到train/vallist.txt文件中
-                for train_img in train_list:
-                    train_file.write("{}/{}:{}\n".format(folder, train_img, int(label)))
-                for val_img in val_list:
-                    val_file.write("{}/{}:{}\n".format(folder, val_img, int(label)))
-
-        logger.info("trainlist {} images, vallist {} images, total {} images".format(data_count[1], data_count[2], data_count[0]))
 
 
 if __name__ == "__main__":
@@ -239,15 +209,12 @@ if __name__ == "__main__":
             "image_set": "train.txt",
             "in_channels": 1,
             "input_size": [224, 224],
-            "cache": False,
-            "train_ratio": 0.9,
-            "shuffle": True,
-            "sample_range": [2000, 3000],
+            "cache": True,
             "images_suffix": [".bmp"]
         },
         "transforms": {
             "kwargs": {
-                "histogram": {"p": 1},
+                # "histogram": {"p": 1},
                 "Normalize": {"mean": 0, "std": 1, "p": 1}
             }
         }
@@ -255,7 +222,7 @@ if __name__ == "__main__":
     dataset_c = DotMap(dataset_c)
     transforms = get_transformer(dataset_c.transforms.kwargs)
     seg_d = ClsDataset(preproc=transforms, **dataset_c.kwargs)
-    a, b, c = seg_d.__getitem__(1)
+    a, b, c = seg_d.__getitem__(20000)
     cv2.imwrite("/root/code/t1.jpg", denormalization(a, [0], [1]))
     print(c)
     print(b)
