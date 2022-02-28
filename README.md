@@ -5,7 +5,7 @@
 在**工业流程**中，深度学习应用过程包括：
 
 - TrainVal(针对特定场景，特定数据集训练一个模型)
-- Eval(使用测试集测试，得到工业上的性能指标)
+- Eval(使用验证/测试集测试，得到工业上的性能指标)
 - Demo(将模型做个demo给客户展示)
 - Export(将模型转成其他格式)
 - Deploy(将模型部署到具体的设备上，并权衡速度与准确率)
@@ -37,183 +37,155 @@
 
 ### 2.1 组件支持
 
-详细，请看API。
-
-#### 2.1.1 Models
-
-- Backbone
-  - 使用[timm](resources/timm_introduce.md)作为backbone
-- Classification
-  - ResNets
-  - EfficientNets
-- Segmentation
-  - PSPNet
-  - UNet
-  - UNet++
-- Detection
-  - Yolox
-- Anomaly
-  - PaDiM
-  - CFlow-AD
-  - 
-
-#### 2.1.2 DataLoader
-
-- DataSets
-
-  - [MVTecDataset](resources/dataset_mvtecdataset.md)
-
-  - ClsDataSet
-  - SegDataSet
-
-- DataLoaders
-
-  - BatchDataLoader
-
-- Augments
-
-  - 
-
-#### 2.1.3 Losses
-
-- 
-
-#### 2.1.4 Optims
-
-- 
-
-#### 2.1.5 Schedulers
-
-- 
-
-#### 2.1.6 Evaluators
-
-- 
+包括Model、Dataset、Dataloader、Loss、Evaluator、Optim、Scheduler等，详细请看[API](resources/API.md)。
 
 
-
-### 2.1 项目结构
+### 2.2 项目结构
 
 ```tree
-root@c98fb50f30a8:~/code/DAO# tree
-├── configs # 配置文件
-│   ├── task-model-optim-datasetType-loss-scheduler-trainval-arch.json
-│   ├── ...
-│   └── super
-│       ├── custom_modules.json
-│       ├── dataloaders.json
-│       ├── evaluators.json
-│       ├── losses.json
-│       ├── models.json
-│       ├── optims.json
-│       └── schedulers.json
-├── core	# 核心库
-│   ├── __init__.py
-│   ├── modules	# 模块组件
-│   │   ├── __init__.py
-│   │   ├── dataloaders	# 数据加载组件
-│   │   │   ├── CLS_TXTD.py
-│   │   │   ├── __init__.py
-│   │   │   ├── augments
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── custom
-│   │   │   │   │   ├── __init__.py
-│   │   │   │   │   └── histogram.py
-│   │   │   │   └── data_augment.py
-│   │   │   ├── data_prefetcher.py
-│   │   │   ├── dataloading.py
-│   │   │   ├── datasets
-│   │   │   │   ├── CLS_TXT.py
-│   │   │   │   └── __init__.py
-│   │   │   └── samplers.py
-│   │   ├── evaluators	# 验证器组件
-│   │   │   ├── CLS_TXT_Evaluator.py
-│   │   │   └── __init__.py
-│   │   ├── losses	# 损失函数组件
-│   │   │   ├── CrossEntropyLoss.py
-│   │   │   └── __init__.py
-│   │   ├── models	# 模型组件
-│   │   │   ├── __init__.py
-│   │   │   ├── backbone
-│   │   │   │   ├── EfficientNet
-│   │   │   │   │   ├── __init__.py
-│   │   │   │   │   ├── model.py
-│   │   │   │   │   └── utils.py
-│   │   │   │   └── __init__.py
-│   │   │   └── cls
-│   │   │       ├── EfficientNet.py
-│   │   │       └── __init__.py
-│   │   ├── optims	# 优化器组件
-│   │   │   ├── __init__.py
-│   │   │   └── sgd_warmup_bias_bn_weight.py
-│   │   ├── register.py	# 所有模型注册器
-│   │   ├── schedulers	# lr调整策略组件
-│   │   │   ├── __init__.py
-│   │   │   ├── cos_lr.py
-│   │   │   ├── multistep_lr.py
-│   │   │   ├── warm_cos_lr.py
-│   │   │   ├── yolox_semi_warm_cos_lr.py
-│   │   │   └── yolox_warm_cos.py
-│   │   └── utils	# 工具
-│   │       ├── __init__.py
-│   │       └── metricCls.py
-│   ├── tools	# train、evaluate、demo、export过程
-│   │   ├── __init__.py
-│   │   ├── demo.py
-│   │   ├── eval.py
-│   │   ├── export.py
-│   │   ├── trainval.py
-│   │   └── utils
-│   │       ├── __init__.py
-│   │       └── register_modules.py
-│   ├── trainers	# trainval核心部分
-│   │   ├── __init__.py
-│   │   ├── launch.py
-│   │   ├── trainerCls.py
-│   │   └── utils
-│   │       ├── __init__.py
-│   │       ├── checkpoint.py
-│   │       ├── ema.py
-│   │       ├── logger.py
-│   │       └── metrics.py
-│   ├── utils # 工具
-│   │   ├── __init__.py
-│   │   ├── allreduce_norm.py
-│   │   ├── dist.py
-│   │   └── setup_env.py
-│   └── version.py
-├── custom_modules	# 自定义模块组件存放位置
-│   ├── model_mine.py
-│   └── model_mine2.py
-├── desktop.ini
-├── main.py
-├── pretrained	# 预训练模型
-│   └── efficientnet-b0-355c32eb.pth
-├── requirements.txt
-├── saved	# 结果存放位置
-│   └── test
-│       ├── 12-03_17-46
-│       │   ├── best_ckpt.pth
-│       │   ├── events.out.tfevents.1638524781.c98fb50f30a8.1183700.0
-│       │   ├── last_epoch_ckpt.pth
-│       │   ├── latest_ckpt.pth
-│       │   └── train_log.txt
-│       └── 12-06_09-43
-│           ├── best_ckpt.pth
-│           ├── events.out.tfevents.1638755035.c98fb50f30a8.1192675.0
-│           ├── last_epoch_ckpt.pth
-│           ├── latest_ckpt.pth
-│           └── train_log.txt
+├── configs # ----------- 配置文件 ---------------
+  |-- AnomalyDetection  # 异常检测配置目录
+  |   |-- anomaly-PaDiM-MVTecDataset-demo-linux.json
+  |   |-- anomaly-PaDiM-MVTecDataset-eval-linux.json
+  |   |-- anomaly-PaDiM-MVTecDataset-export-linux.json
+  |   `-- anomaly-PaDiM-MVTecDataset-trainval-linux.json
+  |-- ImageClassification # 分类配置目录
+  |   |-- cls-TIMMC(efficientnet_b0)-ClsDataset(LvJian)-ClsEvaluator-eval-linux.json
+  |   |-- cls-TIMMC(efficientnet_b0)-demo-linux.json
+  |   |-- cls-TIMMC(efficientnet_b0)-export-linux.json
+  |   |-- cls-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataset(LvJian)-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux.json
+  |-- Modules # 其他模块配置，eg. 自定义模块配置文件
+  |   |-- custom_modules.json
+  |-- ObjectDetection
+  |   |-- ......
+  `-- ......
+
+├── core # ----------- 核心库文件 ---------------
+  |-- __init__.py 
+  |-- DAO.py  # 接口文件
+  |-- version.py  # 版本信息
+  |-- modules # 模块组件
+  |   |-- __init__.py   # 所有模块组件注册、导入
+  |   |-- register.py   # 所有模块组件注册器
+  
+  |   |-- dataloaders   # dataloader组件
+  |   |   |-- __init__.py
+  |   |   |-- augments        # 数据增强库（albumentations版本）
+  |   |   |-- augmentsTorch   # 数据增强库（Torch版本）
+  |   |   |-- datasets        # 数据集库(ClsDataset, DetDataset, MVTecDataset, SegDataset)
+  |   |   |-- utils           # 数据集读取库(data_prefetcher、samplers、dataloading)
+  |   |   |-- AnomalyDataloader.py  # 异常检测数据读取文件
+  |   |   |-- ClsDataloader.py      # 分类数据读取文件
+  |   |   |-- DetDataloader.py      # 目标检测数据读取文件
+  |   |   |-- SegDataloader.py      # 分割数据读取文件
+
+  |   |-- evaluators   # evaluator组件
+  |   |   |-- __init__.py
+  |   |   |-- AnomalyEvaluator.py   # 异常检测测试文件
+  |   |   |-- ClsEvaluator.py       # 分类测试文件
+  |   |   |-- DetEvaluator.py       # 目标检测测试文件
+  |   |   |-- SegEvaluator.py       # 分割测试文件
+  
+  |   |-- losses      # loss组件
+  |   |   |-- __init__.py
+  |   |   |-- CrossEntropyLoss.py   # 交叉熵
+  |   |   `-- ssim.py               # TODO
+  
+  |   |-- models      # model组件
+  |   |   |-- __init__.py
+  |   |   |-- anomaly       # 异常检测库
+  |   |   |-- backbone      # 主干网络库
+  |   |   |-- cls           # 分类网络库
+  |   |   |-- det           # 目标检测库
+  |   |   |-- seg           # 分割库
+  |   |   `-- utils         # 工具库
+
+  |   |-- optims      # 优化器组件
+  |   |   |-- __init__.py
+  |   |   `-- sgd_warmup_bias_bn_weight.py
+  
+  |   |-- schedulers  # 学习率调整策略组件
+  |   |   |-- __init__.py
+  |   |   |-- cos_lr.py
+  |   |   |-- multistep_lr.py
+  |   |   |-- poly.py
+  |   |   |-- warm_cos_lr.py
+  |   |   |-- yolox_semi_warm_cos_lr.py
+  |   |   `-- yolox_warm_cos.py
+  
+  |   `-- utils     # 各个组件所需的工具
+  |       |-- __init__.py
+  |       |-- boxes.py
+  |       |-- helpers.py
+  |       |-- metricCls.py
+  |       |-- metricDet.py
+  |       |-- metricSeg.py
+  |       |-- model_utils.py
+  |       `-- visualize.py
+
+  |-- tools   # 训练工具库（trainval、eval、demo、export等）
+  |   |-- __init__.py
+  |   |-- demo.py
+  |   |-- eval.py
+  |   |-- export.py
+  |   |-- trainval.py
+  |   `-- utils   # 使用modules组件工具
+  |       |-- __init__.py
+  |       `-- register_modules.py
+  
+  |-- trainers  # Trainers工具库
+  |   |-- __init__.py
+  |   |-- launch.py
+  |   |-- trainerAnomaly.py
+  |   |-- trainerCls.py
+  |   |-- trainerDet.py
+  |   |-- trainerIQA.py
+  |   |-- trainerSeg.py
+  |   `-- utils # trainer过程所需的库
+  |       |-- __init__.py
+  |       |-- checkpoint.py
+  |       |-- ema.py
+  |       |-- logger.py
+  |       |-- metrics.py
+  |       `-- palette.py
+  
+  |-- utils   # 多GPU工具库
+  |   |-- __init__.py
+  |   |-- allreduce_norm.py
+  |   |-- dist.py
+  |   `-- setup_env.py
+
+├── custom_modules # ----------- 自定义组件 ---------------
+  |-- __init__.py 
+  |-- model_mine.py
+  `-- model_mine2.py
+
+├── pretrained # ----------- 各个模型的预训练结果 ---------------
+  |-- cls 
+  |-- seg
+  |-- det
+  |-- anomaly
+  
+├── resources # ----------- 资源文档文件夹 ---------------
+  
+├── saved # ----------- 结果存放位置 ---------------
+  |-- cls 
+  |-- seg
+  |-- det
+  |-- anomaly
+ 
+├── .gitignore
 ├── LICENSE
 ├── README.md
+├── README.rst
+├── requirements.txt
 ├── setup.cfg
-└── setup.py
+├── setup.py
+
 ```
-### 2.2 调用流程
+### 2.3 调用流程
 
 ![](resources/main.png)
-
-### 2.3 trainerX.py代码过程
 
 #### 2.3.1 TrainVal过程
 
@@ -259,54 +231,27 @@ root@c98fb50f30a8:~/code/DAO# tree
 ```
 
 ## 3. 如何使用
-
-### 3.1 Classification
-
-
-
-### 3.2 Detection 
-
-#### 3.2.1 Data Type
-
-##### 1. VOC
-
-详细请百度
-
-##### 2. COCO
-
-详细请百度
-
-##### 3. CCDT
-
-COCO Detection Type，参考[2.COCO](#####2. COCO数据集)数据集
-
-#### 3.2.2  Train
+### 3.1  Train
 
 `CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/trainval/trainval.py -f configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json -d 2 -b 64 --fp16 -o --cache`
 
 > 备注：如果使用`CUDA_VISIBLE_DEVICES=4`， 最好将`-o`参数去掉
 
-#### 3.2.3 Eval
+### 3.2 Eval
 
 `CUDA_VISIBLE_DEVICES=0,1 python tools/eval/evalDet.py -f configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json   -c  saved/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04/voc/best_ckpt.pth -b 16 -d 1 --conf 0.001 --fp16 --fuse`
 
-#### 3.2.4 Demo
+### 3.3 Demo
 
 `CUDA_VISIBLE_DEVICES=0 python tools/demo/demoDet.py image -f configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json   -c  saved/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04/voc/best_ckpt.pth --path /root/code/AI/datasets/VOCdevkit/VOC2007/JPEGImages/ or dog.jpg --conf 0.2 --nms 0.5 --tsize 640 --save_result --device gpu`
 
-#### 3.2.5  Export
+### 3.4  Export
 
 `CUDA_VISIBLE_DEVICES=0 python tools/export/export_onnx.py -f configs/det_yolox_voc_default_sgd_yoloxwarmcos_trainval_ubuntu20.04.json   -c  saved/pretrained/yolox_voc/11-14_08-45/best_ckpt.pth --output-name saved/pretrained/yolox_voc/11-14_08-45/best_ckpt.onnx`
 
-#### 3.2.6  Deploy
+### 3.5  Deploy
+`TODO`
 
-### 3.3 Segmentation
-
-### 3.4 IQA
-
-### 3.5 Anomaly
-
-### 3.6 FSL
 
 ## Reference
 ### Segmentation 参考
@@ -315,3 +260,13 @@ COCO Detection Type，参考[2.COCO](#####2. COCO数据集)数据集
   
 ### Detection 参考
 - https://github.com/Megvii-BaseDetection/YOLOX
+- https://zhuanlan.zhihu.com/p/391396921
+- YOLOX课程: https://edu.51cto.com/center/course/lesson/index?id=774242
+- FPN: https://cloud.tencent.com/developer/article/1546594
+- PAFPN: https://zhuanlan.zhihu.com/p/397020975
+- YOLOX结构图: https://blog.csdn.net/nan355655600/article/details/119329727
+
+### 分布式参考
+- DDP原理1: https://zhuanlan.zhihu.com/p/76638962 
+- DDP原理2: https://zhuanlan.zhihu.com/p/343951042
+- DDP随机种子: https://bbs.cvmart.net/articles/5491
