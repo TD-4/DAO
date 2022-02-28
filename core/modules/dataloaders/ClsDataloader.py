@@ -1,22 +1,38 @@
-#!/usr/bin/env python3
+
 # -*- coding:utf-8 -*-
 # @auther:FelixFu
 # @Date: 2021.10.1
 # @github:https://github.com/felixfu520
+
 from loguru import logger
 
 import torch.multiprocessing
 
-from core.modules.register import Registers
 from core.modules.dataloaders.augments import get_transformer
 from core.modules.dataloaders.utils.dataloading import DataLoader, worker_init_reset_seed
 from core.modules.dataloaders.utils.samplers import InfiniteSampler, BatchSampler
 from core.modules.dataloaders.utils.data_prefetcher import DataPrefetcherCls
 from core.utils import wait_for_the_master, get_local_rank, get_world_size
 
+from core.modules.register import Registers
+
 
 @Registers.dataloaders.register
-def ClsDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0, **kwargs):
+def ClsDataloaderTrain(
+        is_distributed=False,
+        batch_size=None,
+        num_workers=None,
+        dataset=None,
+        seed=0,
+        **kwargs):
+    """
+    ClsDataset的dataloader类
+
+    is_distributed:bool 是否是分布式
+    batch_size: int batchsize大小，多个GPU的batchsize总和
+    num_workers:int 使用线程数
+    dataset:ClsDataset类 数据集类的实例
+    """
     # 获得local_rank
     local_rank = get_local_rank()
 
