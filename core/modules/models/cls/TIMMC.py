@@ -12,3 +12,29 @@ from core.modules.register import Registers
 def TIMMC(backbone_kwargs):
     backbone = Registers.backbones.get("TIMM")(backbone_kwargs)
     return backbone
+
+
+if __name__ == "__main__":
+    from dotmap import DotMap
+    from core.modules.register import Registers
+    from core.modules.models.backbone import TIMM
+    model_c = {
+        "type": "TIMMC",
+        "summary_size": [1, 224, 224],
+        "backbone": {
+            "kwargs": {
+                "model_name": "efficientnet_b0",
+                "pretrained": True,
+                "checkpoint_path": "",
+                "exportable": True,
+                "in_chans": 1,
+                "num_classes": 38
+            }
+        },
+        "kwargs": {
+        }
+    }
+    model_c = DotMap(model_c)
+
+    model = Registers.cls_models.get(model_c.type)(model_c.backbone)
+    print(model)
