@@ -56,6 +56,7 @@ class ClsTrainer:
                 self._after_iter()
             self._after_epoch()
         self._after_train()
+        return 0
 
     def _before_train(self):
         """
@@ -340,6 +341,7 @@ class ClsEval:
     def eval(self):
         self._before_eval()
         self.evaluator.evaluate(self.model, get_world_size() > 1, device="cuda:{}".format(get_local_rank()), output_dir=self.output_dir)
+        return 0
 
     def _before_eval(self):
         """
@@ -459,7 +461,7 @@ class ClsDemo:
                 top1_id = temp[1]
                 top1_scores = temp[2]
                 result_file.write("Image:{} pred:{} scores:{:4f}\n".format(img_p, top1_id, top1_scores))
-        return
+        return 0
 
 
 @Registers.trainers.register
@@ -478,6 +480,7 @@ class ClsExport:
                           x,
                           onnx_path,
                           **self.exp.onnx.kwargs)
+        return 0
 
     def _before_export(self):
         """
