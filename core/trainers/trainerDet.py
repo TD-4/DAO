@@ -22,7 +22,8 @@ from torchsummary import summary
 
 from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
 from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel, gpu_mem_usage, get_palette, colorize_mask
-from core.modules.utils import MeterDetTrain, get_model_info, MeterBuffer
+from core.modules.utils import get_model_info
+from core.trainers.utils import MeterDetTrain, MeterBuffer
 from core.modules.dataloaders.utils.data_prefetcher import DataPrefetcherDet
 from core.modules.dataloaders.augments import get_transformer
 
@@ -479,9 +480,7 @@ class DetEval:
 
     def eval(self):
         self._before_eval()
-        self.evaluator.evaluate(self.model, get_world_size() > 1,
-                                                               device="cuda:{}".format(get_local_rank()),
-                                                               output_dir=self.output_dir)
+        self.evaluator.evaluate(self.model, get_world_size() > 1)
 
     def _before_eval(self):
         """
@@ -494,16 +493,13 @@ class DetEval:
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"val_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")
-        logger.info(f"create log file {self.output_dir}/train_log.txt")  # log txt
+        logger.info(f"create log file {self.output_dir}/eval_log.txt")  # log txt
         logger.info("exp value:\n{}".format(self.exp))
-        logger.info(f"create Tensorboard logger {self.output_dir}")
 
         logger.info("2. Model Setting ...")
         torch.cuda.set_device(get_local_rank())
-        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        model = Registers.det_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
-        summary(model, input_size=tuple(self.exp.model.summary_size),
-                device="{}".format(next(model.parameters()).device))  # log torchsummary model
         model.to("cuda:{}".format(get_local_rank()))  # model to self.device
 
         ckpt_file = self.exp.trainer.ckpt
@@ -521,12 +517,12 @@ class DetEval:
         self.evaluator = Registers.evaluators.get(self.exp.evaluator.type)(
             is_distributed=get_world_size() > 1,
             dataloader=self.exp.evaluator.dataloader,
-            num_classes=self.exp.model.kwargs.num_classes,
-            industry=self.exp.evaluator.industry,
+            num_classes=self.exp.model.kwargs.head.num_classes,
             **self.exp.evaluator.kwargs
         )
-        self.train_metrics = MeterSegTrain(self.exp.model.kwargs.num_classes)
-        logger.info("Now Eval Start ......")
+        self.train_metrics = MeterBuffer(window_size=self.exp.trainer.log.log_per_iter)
+        self.best_acc = 0
+        logger.info("Now Training Start ......")
 
 
 @Registers.trainers.register

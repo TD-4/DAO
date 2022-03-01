@@ -23,7 +23,7 @@ from core.trainers.utils import (
     ModelEMA, EMA, is_parallel, gpu_mem_usage,
     get_palette, colorize_mask
 )
-from core.modules.utils import MeterSegTrain, denormalization
+from core.trainers.utils import MeterSegTrain, denormalization
 from core.modules.dataloaders.augments import get_transformer
 from core.modules.register import Registers
 

@@ -6,23 +6,32 @@
 # @Copy From:
 
 
-import os
+import os   # 导入系统相关库
 import time
 import datetime
 import numpy as np
 from PIL import Image
 from loguru import logger
 
-import torch
+import torch    # 深度学习相关库
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 
-from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
-from core.trainers.utils import setup_logger, load_ckpt, save_checkpoint, occupy_mem, ModelEMA, is_parallel
-from core.modules.utils import MeterClsTrain, plot_confusion_matrix
-from core.trainers.utils import gpu_mem_usage
 from core.modules.dataloaders.augments import get_transformer
+from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize   # 导入GPUS库
+from core.trainers.utils import (       # 导入Train util库
+    setup_logger,
+    gpu_mem_usage,
+    load_ckpt,
+    save_checkpoint,
+    occupy_mem,
+    ModelEMA,
+    is_parallel,
+    MeterClsTrain,
+    plot_confusion_matrix
+)
+
 from core.modules.register import Registers
 
 
@@ -59,8 +68,7 @@ class ClsTrainer:
         7.Scheduler Setting;
         8.Evaluator Setting;
         """
-        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
-            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"train_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")
@@ -72,9 +80,7 @@ class ClsTrainer:
 
         logger.info("2. Model Setting ...")
         torch.cuda.set_device(get_local_rank())
-        model = Registers.cls_models.get(self.exp.model.type)(
-            self.exp.model.backbone,
-            **self.exp.model.kwargs)  # get model from register
+        model = Registers.cls_models.get(self.exp.model.type)(self.exp.model.backbone, **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))   # log model structure
         summary(model, input_size=tuple(self.exp.model.summary_size), device="{}".format(next(model.parameters()).device))  # log torchsummary model
         model.to("cuda:{}".format(get_local_rank()))    # model to self.device
@@ -325,16 +331,15 @@ class ClsEval:
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')   # 此次trainer的开始时间
 
         # 因为ClsEval只支持单机单卡，且batchsize为1
-        assert exp.envs.gpus.devices == 1, "exp.envs.gpus.devices must 1, please set again "
-        assert exp.envs.gpus.num_machines == 1, "exp.envs.gpus.devices must 1, please set again "
-        assert exp.envs.gpus.machine_rank == 0, "exp.envs.gpus.devices must 0, please set again "
-        assert exp.evaluator.dataloader.kwargs.batch_size == 1, "exp.envs.gpus.devices must 1, please set again "
+        if exp.evaluator.kwargs.is_industry:
+            assert exp.envs.gpus.devices == 1, "exp.envs.gpus.devices must 1, please set again "
+            assert exp.envs.gpus.num_machines == 1, "exp.envs.gpus.devices must 1, please set again "
+            assert exp.envs.gpus.machine_rank == 0, "exp.envs.gpus.devices must 0, please set again "
+            assert exp.evaluator.dataloader.kwargs.batch_size == 1, "exp.envs.gpus.devices must 1, please set again "
 
     def eval(self):
         self._before_eval()
-        self.evaluator.evaluate(self.model, get_world_size() > 1,
-                                device="cuda:{}".format(get_local_rank()),
-                                output_dir=self.output_dir)
+        self.evaluator.evaluate(self.model, get_world_size() > 1, device="cuda:{}".format(get_local_rank()), output_dir=self.output_dir)
 
     def _before_eval(self):
         """
@@ -342,8 +347,7 @@ class ClsEval:
         2.Model Setting;
         3.Evaluator Setting;
         """
-        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
-            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"val_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")
@@ -353,17 +357,13 @@ class ClsEval:
 
         logger.info("2. Model Setting ...")
         torch.cuda.set_device(get_local_rank())
-        model = Registers.cls_models.get(self.exp.model.type)(
-            self.exp.model.backbone,
-            **self.exp.model.kwargs)  # get model from register
+        model = Registers.cls_models.get(self.exp.model.type)(self.exp.model.backbone, **self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
-        summary(model, input_size=tuple(self.exp.model.summary_size),
-                device="{}".format(next(model.parameters()).device))  # log torchsummary model
+        summary(model, input_size=tuple(self.exp.model.summary_size),   device="{}".format(next(model.parameters()).device))  # log torchsummary model
         model.to("cuda:{}".format(get_local_rank()))  # model to self.device
 
         ckpt_file = self.exp.trainer.ckpt
         ckpt = torch.load(ckpt_file, map_location="cuda:{}".format(get_local_rank()))["model"]
-        # ckpt = torch.load(ckpt_file, map_location="cuda:{}".format(get_local_rank()))["state_dict"]
         model = load_ckpt(model, ckpt)
 
         logger.info("Model DDP Setting")
@@ -393,8 +393,7 @@ class ClsDemo:
         1.Logger Setting
         2.Model Setting;
         """
-        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
-            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"demo_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")
@@ -478,8 +477,7 @@ class ClsExport:
         1.Logger Setting
         2.Model Setting;
         """
-        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
-            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"export_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")

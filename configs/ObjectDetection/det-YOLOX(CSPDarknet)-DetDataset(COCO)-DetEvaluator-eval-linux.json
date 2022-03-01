@@ -1,0 +1,81 @@
+{
+    "name": "det-YOLOX(CSPDarknet)-DetDataset(COCO)-DetEvaluator-eval-linux",
+    "type": "det",
+    "seed": 0,
+
+    "envs": {
+        "type": "linux",
+        "gpus": {
+            "dist_backend": "nccl",
+            "dist_url": null,
+            "devices": 1,
+            "num_machines": 1,
+            "machine_rank": 0
+        }
+    },
+    "trainer": {
+        "type": "DetEval",
+        "log": {
+            "log_dir": "/root/code/DAO/saved",
+            "log_per_iter": 10
+        },
+
+        "ckpt": "/root/code/DAO/saved/det-YOLOX(CSPDarknet)-sgd_warmup_bias_bn_weight-DetDataset(COCO)-CrossEntropyLoss-warm_cos_lr-DetEvaluator-trainval-linux/02-10_17-07/last_epoch_ckpt.pth",
+        "resume": false
+
+    },
+    "model": {
+        "type": "YOLOX",
+        "summary_size": [3,640,640],
+        "kwargs": {
+            "backbone": {
+                "depth": 1.0,
+                "width": 1.0,
+                "in_features": ["dark3", "dark4", "dark5"],
+                "in_channels": [256, 512, 1024],
+                "depthwise": false,
+                "act": "silu"
+            },
+            "head": {
+                "num_classes": 80,
+                "width": 1.0,
+                "strides": [8, 16, 32],
+                "in_channels": [256, 512, 1024],
+                "act": "silu",
+                "depthwise": false
+            }
+        }
+    },
+    "evaluator": {
+        "type": "DetEvaluator",
+        "dataloader": {
+            "type": "DetDataloaderEval",
+            "dataset": {
+                "type": "DetDataset",
+                "kwargs": {
+                    "data_dir": "/root/data/DAO/COCO",
+                    "image_set": "val2017",
+                    "in_channels": 3,
+                    "input_size": [640, 640],
+                    "cache": false,
+                    "image_suffix":".jpg"
+	            },
+                "transforms": {
+                    "kwargs": {
+                         "swap":[2, 0, 1],
+                         "legacy": false
+                    }
+            }
+            },
+            "kwargs": {
+                "num_workers": 8,
+                "batch_size": 16
+            }
+        },
+        "kwargs": {
+            "img_size": [640, 640],
+            "confthre": 0.5,
+            "nmsthre": 0.5
+        }
+    }
+}

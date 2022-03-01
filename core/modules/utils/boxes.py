@@ -30,9 +30,9 @@ def filter_box(output, scale_range):
     return output[keep]
 
 
-# 后处理：非极大值抑制 NMS， 调用torchvision
+# 后处理：非极大值抑制 NMS， 调用torchvision; prediction:torch.Size([16, 8400, 85])
 def postprocess(prediction, num_classes, conf_thre=0.7, nms_thre=0.45, class_agnostic=False):
-    box_corner = prediction.new(prediction.shape)
+    box_corner = prediction.new(prediction.shape)   # torch.Size([16, 8400, 85])
     box_corner[:, :, 0] = prediction[:, :, 0] - prediction[:, :, 2] / 2
     box_corner[:, :, 1] = prediction[:, :, 1] - prediction[:, :, 3] / 2
     box_corner[:, :, 2] = prediction[:, :, 0] + prediction[:, :, 2] / 2

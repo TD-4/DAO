@@ -1,15 +1,399 @@
 # API
 
-## 1. models
+## 1. datasets & dataloaders
 
-### 🍕Backbones
+### 🍳ClsDataset √
 
-[Pytorch视觉模型库--timm](./timm_introduce.md) | [source](../core/modules/models/backbone/TIMM.py)
+[source](../core/modules/dataloaders/datasets/ClsDataset.py)
+
+**构造函数**
+
+```
+class ClsDataset(Dataset):
+    def __init__(self,
+                 data_dir=None,
+                 image_set="",
+                 in_channels=1,
+                 input_size=(224, 224),
+                 preproc=None,
+                 cache=False,
+                 separator=":",
+                 images_suffix=None):
+        """
+        分类数据集
+
+        data_dir:str  数据集文件夹路径，文件夹要求是
+            |-dataset
+                |- 类别1
+                    |-图片
+                |- 类别2
+                |- ......
+                |- train.txt
+                |- val.txt
+                |- test.txt
+                |- labels.txt
+
+        image_set:str "train.txt", "val.txt" or "test.txt"
+        in_channels:int  输入图片的通道数，目前只支持1和3通道
+        input_size:tuple 输入图片的HW
+        preproc:albumentations.Compose 对图片进行预处理
+        cache:bool 是否对图片进行内存缓存
+        separator:str labels.txt, train.txt, val.txt, test.txt 的分割符（name与id）
+        images_suffix:list[str] 可接受的图片后缀
+        """
+```
+
+**configs**
+
+```
+"dataset": {
+        "type": "ClsDataset",
+        "kwargs": {
+            "data_dir": "/root/data/DAO/screen",
+            "image_set": "train.txt",
+            "in_channels": 1,
+            "input_size": [224, 224],
+            "cache": True,
+            "images_suffix": [".bmp"]
+        },
+        "transforms": {
+            "kwargs": {
+                "histogram": {"p": 1},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+            }
+        }
+    }
+```
+
+### 🍛ClsDataloaderTrain √
+
+[source](../core/modules/dataloaders/ClsDataloader.py)
+
+**构造函数**
+
+```
+def ClsDataloaderTrain(
+        is_distributed=False,
+        batch_size=None,
+        num_workers=None,
+        dataset=None,
+        seed=0,
+        **kwargs):
+    """
+    ClsDataset的dataloader类
+
+    is_distributed:bool 是否是分布式
+    batch_size: int batchsize大小，多个GPU的batchsize总和
+    num_workers:int 使用线程数
+    dataset:ClsDataset类 数据集类的实例
+    """
+    
+    ......
+    return train_loader, max_iter
+```
+
+**configs**
+
+```
+ "dataloader": {
+        "type": "ClsDataloaderTrain",
+        "dataset": {
+            "type": "ClsDataset",
+            "kwargs": {
+                "data_dir": "/root/data/DAO/screen",
+                "image_set": "train.txt",
+                "in_channels": 1,
+                "input_size": [224, 224],
+                "cache": True,
+                "images_suffix": [".bmp"]
+            },
+            "transforms": {
+                "kwargs": {
+                    "histogram": {"p": 1},
+                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+                }
+            }
+        },
+        "kwargs": {
+            "num_workers": 4,
+            "batch_size": 256
+        }
+    },
+```
+
+### 🥩ClsDataloaderEval √
+
+[source](../core/modules/dataloaders/ClsDataloader.py)
+
+**构造函数**
+
+```
+def ClsDataloaderEval(
+        is_distributed=False,
+        batch_size=None,
+        num_workers=None,
+        dataset=None,
+        **kwargs):
+    """
+    ClsDataset的dataloader类
+
+    is_distributed:bool 是否是分布式
+    batch_size: int batchsize大小，多个GPU的batchsize总和
+    num_workers:int 使用线程数
+    dataset:ClsDataset类 数据集类的实例
+    """
+    ......
+    return val_loader, len(val_loader)
+```
+
+**configs**
+
+```
+"dataloader": {
+    "type": "ClsDataloaderEval",
+    "dataset": {
+        "type": "ClsDataset",
+        "kwargs": {
+            "data_dir": "/root/data/DAO/screen",
+            "image_set": "train.txt",
+            "in_channels": 1,
+            "input_size": [224, 224],
+            "cache": True,
+            "images_suffix": [".bmp"]
+        },
+        "transforms": {
+            "kwargs": {
+                "histogram": {"p": 1},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+            }
+        }
+    },
+    "kwargs": {
+        "num_workers": 4,
+        "batch_size": 256
+    }
+},
+```
+
+### 
+
+
+
+### 🍟SegDataset
+
+[source](../core/modules/dataloaders/datasets/SegDataset.py)
+
+**构造函数**
+
+```
+Class SegDataset(data_dir=None, preproc=None, image_set="", in_channels=1, input_size=(224, 224), cache=False, image_suffix=".jpg", mask_suffix=".png"):
+"""
+	分割数据集
+
+	data_dir:str  数据集文件夹路径，文件夹要求是
+           |-dataset
+                |- images
+                    |-图片
+                |- masks
+
+    image_set:str "train.txt or val.txt or test.txt"
+    in_channels:int  输入图片的通道数，目前只支持1和3通道
+    input_size:tuple 输入图片的HW
+    preproc:albumentations.Compose 对图片进行预处理
+    cache:bool 是否对图片进行内存缓存
+    images_suffix:str 可接受的图片后缀
+    mask_suffix:str 可接受的图片后缀
+"""
+```
+
+**config.json**
+
+```
+"dataset": {
+	"type": "SegDataset",
+	"kwargs": {
+		"data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
+		"image_set": "val.txt",
+        "in_channels": 3,
+        "input_size": [380, 380],
+        "cache": false,
+        "image_suffix":".jpg",
+        "mask_suffix":".png"
+	},
+    "transforms": {
+    	"kwargs": {
+    		"Resize": {"height": 224, "width": 224, "p": 1},
+    		"Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
+		}
+	}
+}
+```
+
+### 🥗SegDataloaderTrain
+
+[source](../core/modules/dataloaders/SegDataloader.py)
+
+**构造函数**
+
+```
+def SegDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0)
+"""
+is_distributed : bool 是否是分布式
+batch_size : int batchsize大小
+num_workers : int 读取数据线程数
+dataset : DotMap 数据集配置
+seed : int 随机种子
+"""
+```
+
+返回类型
+
+```
+train_loader = DataPrefetcherSeg(train_loader)
+return train_loader, max_iter
+```
+
+**configs.json**
+
+```
+    "dataloader": {
+        "type": "SegDataloaderTrain",
+        "dataset": {
+	        "type": "SegDataset",
+            "kwargs": {
+                    "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
+                    "image_set": "val.txt",
+                    "in_channels": 3,
+                    "input_size": [380, 380],
+                    "cache": false,
+                    "image_suffix":".jpg",
+                    "mask_suffix":".png"
+	            },
+            "transforms": {
+                "kwargs": {
+                    "Resize": {"height": 224, "width": 224, "p": 1},
+                    "Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
+                }
+            }
+        },
+        "kwargs": {
+            "num_workers": 4,
+            "batch_size": 32
+        }
+    }
+```
+
+### 🌭SegDataloaderEval
+
+[source](../core/modules/dataloaders/SegDataloader.py)
+
+**构造函数**
+
+```
+def SegDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, dataset=None):
+    """
+    is_distributed : bool 是否是分布式
+    batch_size : int batchsize大小
+    num_workers : int 读取数据线程数
+    dataset : DotMap 数据集配置
+    """
+```
+
+返回类型
+
+```
+val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
+return val_loader, len(val_loader)
+```
+
+
+
+**configs.json**
+
+```
+"dataloader": {
+            "type": "SegDataloaderEval",
+            "dataset": {
+                "type": "SegDataset",
+                "kwargs": {
+                    "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
+                    "image_set": "val.txt",
+                    "in_channels": 3,
+                    "input_size": [380, 380],
+                    "cache": false,
+                    "image_suffix":".jpg",
+                    "mask_suffix":".png"
+                },
+                "transforms": {
+                    "kwargs": {
+                        "Resize": {"height": 224, "width": 224, "p": 1},
+                        "Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
+
+                    }
+                }
+            },
+            "kwargs": {
+                "num_workers": 4,
+                "batch_size": 32
+            }
+        }
+```
+
+### MVTecDataset
+
+```
+MVTecDataset(
+    data_dir=None,
+    preproc=None,
+    image_set="",
+    in_channels=1,
+    input_size=(224, 224),
+    cache=False,
+    image_suffix=".png",
+    mask_suffix=".png",
+    **kwargs
+)
+```
+
+异常检测数据集，（MVTecDataset类型）
+
+**1. 构造函数**
+
+- data_dir:str  数据集文件夹路径，文件夹要求是
+      📂datasets
+      ┗ 📂your_custom_dataset
+      ┣ 📂 ground_truth
+      ┃ ┣ 📂 defective_type_1
+      ┃ ┗ 📂 defective_type_2
+      ┣ 📂 test
+      ┃ ┣ 📂 defective_type_1
+      ┃ ┣ 📂 defective_type_2
+      ┃ ┗ 📂 good
+      ┗ 📂 train
+      ┃ ┗ 📂 good
+- preproc:albumentations.Compose 对图片进行预处理
+- image_set:str "train.txt or val.txt or test.txt"
+- in_channels:int  输入图片的通道数，目前只支持1和3通道
+- input_size:tuple 输入图片的HW
+- cache:bool 是否对图片进行内存缓存
+- image_suffix:str 可接受的图片后缀
+- mask_suffix:str 可接受的图片后缀
+
+## 2. models
+
+### 🍕Backbones √
+
+[Pytorch视觉模型库--timm](./models/timm_introduce.md) | [source](../core/modules/models/backbone/TIMM.py)
 
 **构造函数**
 
 ```
 def TIMM(backbone):
+    """
+    获取TIMM主干网络
+
+    backbone:dict backbone:{kwargs:{这里面是timm库创建model的参数}}
+    """
     # 判断model是否在timm支持列表中
     if backbone.kwargs.model_name not in timm.list_models():
         logger.error("timm {} not supported {}".format(
@@ -27,7 +411,6 @@ def TIMM(backbone):
     model = timm.create_model(**backbone.kwargs)
     return model
 
-backbone: dict 主干网络的配置参数
 ```
 
 
@@ -49,7 +432,7 @@ backbone: dict 主干网络的配置参数
 
 需要嵌入其他网络中使用
 
-### 🍿Classifications
+### 🍿Classifications √
 
 [source](../core/modules/models/cls/TIMMC.py)
 
@@ -82,7 +465,7 @@ def TIMMC(backbone_kwargs):
     }
 ```
 
-### Unet
+### 🧂Unet
 
 [source](../core/modules/models/seg/unet/model.py)
 
@@ -287,9 +670,13 @@ class PSPNet(SegmentationModel):
 
 [source](../core/modules/models/seg/deeplab/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/pspnet.md)
 
-## 2. optims
+### Yolox
 
-### 🍔sgd_warmup_bias_bn_weight
+[source](../core/modules/models/seg/deeplab/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/pspnet.md)
+
+## 3. optims
+
+### 🍔sgd_warmup_bias_bn_weight √
 
 [source](../core/modules/optims/sgd_warmup_bias_bn_weight.py)
 
@@ -328,357 +715,15 @@ def sgd_warmup_bias_bn_weight(model=None,
     }
 ```
 
-## 3. datasets & dataloaders
-
-### 🍟SegDataset
-
-[source](../core/modules/dataloaders/datasets/SegDataset.py)
-
-**构造函数**
-
-```
-Class SegDataset(data_dir=None, preproc=None, image_set="", in_channels=1, input_size=(224, 224), cache=False, image_suffix=".jpg", mask_suffix=".png"):
-"""
-	分割数据集
-
-	data_dir:str  数据集文件夹路径，文件夹要求是
-           |-dataset
-                |- images
-                    |-图片
-                |- masks
-
-    image_set:str "train.txt or val.txt or test.txt"
-    in_channels:int  输入图片的通道数，目前只支持1和3通道
-    input_size:tuple 输入图片的HW
-    preproc:albumentations.Compose 对图片进行预处理
-    cache:bool 是否对图片进行内存缓存
-    images_suffix:str 可接受的图片后缀
-    mask_suffix:str 可接受的图片后缀
-"""
-```
-
-**config.json**
-
-```
-"dataset": {
-	"type": "SegDataset",
-	"kwargs": {
-		"data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
-		"image_set": "val.txt",
-        "in_channels": 3,
-        "input_size": [380, 380],
-        "cache": false,
-        "image_suffix":".jpg",
-        "mask_suffix":".png"
-	},
-    "transforms": {
-    	"kwargs": {
-    		"Resize": {"height": 224, "width": 224, "p": 1},
-    		"Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
-		}
-	}
-}
-```
-
-### 🥗SegDataloaderTrain
-
-[source](../core/modules/dataloaders/SegDataloader.py)
-
-**构造函数**
-
-```
-def SegDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0)
-"""
-is_distributed : bool 是否是分布式
-batch_size : int batchsize大小
-num_workers : int 读取数据线程数
-dataset : DotMap 数据集配置
-seed : int 随机种子
-"""
-```
-
-返回类型
-
-```
-train_loader = DataPrefetcherSeg(train_loader)
-return train_loader, max_iter
-```
-
-**configs.json**
-
-```
-    "dataloader": {
-        "type": "SegDataloaderTrain",
-        "dataset": {
-	        "type": "SegDataset",
-            "kwargs": {
-                    "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
-                    "image_set": "val.txt",
-                    "in_channels": 3,
-                    "input_size": [380, 380],
-                    "cache": false,
-                    "image_suffix":".jpg",
-                    "mask_suffix":".png"
-	            },
-            "transforms": {
-                "kwargs": {
-                    "Resize": {"height": 224, "width": 224, "p": 1},
-                    "Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
-                }
-            }
-        },
-        "kwargs": {
-            "num_workers": 4,
-            "batch_size": 32
-        }
-    }
-```
-
-### 🌭SegDataloaderEval
-
-[source](../core/modules/dataloaders/SegDataloader.py)
-
-**构造函数**
-
-```
-def SegDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, dataset=None):
-    """
-    is_distributed : bool 是否是分布式
-    batch_size : int batchsize大小
-    num_workers : int 读取数据线程数
-    dataset : DotMap 数据集配置
-    """
-```
-
-返回类型
-
-```
-val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
-return val_loader, len(val_loader)
-```
 
 
-
-**configs.json**
-
-```
-"dataloader": {
-            "type": "SegDataloaderEval",
-            "dataset": {
-                "type": "SegDataset",
-                "kwargs": {
-                    "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
-                    "image_set": "val.txt",
-                    "in_channels": 3,
-                    "input_size": [380, 380],
-                    "cache": false,
-                    "image_suffix":".jpg",
-                    "mask_suffix":".png"
-                },
-                "transforms": {
-                    "kwargs": {
-                        "Resize": {"height": 224, "width": 224, "p": 1},
-                        "Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
-
-                    }
-                }
-            },
-            "kwargs": {
-                "num_workers": 4,
-                "batch_size": 32
-            }
-        }
-```
-
-### 🍳ClsDataset
-
-[source](../core/modules/dataloaders/datasets/ClsDataset.py)
-
-**构造函数**
-
-```
-class ClsDataset(Dataset):
-    def __init__(self, data_dir=None, image_set="", in_channels=1,
-                 input_size=(224, 224), preproc=None, cache=False,
-                 separator=":", train_ratio=0.9, shuffle=True,
-                 sample_range=(2000, 3000), images_suffix=None):
-                 
-   """
-        分类数据集
-
-        data_dir:str  数据集文件夹路径，文件夹要求是
-            |-dataset
-                |- 类别1
-                    |-图片
-                |- 类别2
-
-        image_set:str "train.txt or val.txt"
-        in_channels:int  输入图片的通道数，目前只支持1和3通道
-        input_size:tuple 输入图片的HW
-        preproc:albumentations.Compose 对图片进行预处理
-        cache:bool 是否对图片进行内存缓存
-        separator:str labels.txt id与name的分隔符
-        train_ratio:float 生成trianlist.txt的比例
-        shuffle:bool 生成train.txt时，folder中的数据是否随机打乱
-        sample_range:tuple 每类允许的最多图片数量的范围
-        images_suffix:list[str] 可接受的图片后缀
-  """
-```
-
-**configs**
-
-```
-"dataset": {
-                "type": "ClsDataset",
-                "kwargs": {
-                    "data_dir": "/root/data/DAO/screen",
-                    "image_set": "val.txt",
-                    "in_channels": 1,
-                    "input_size": [224, 224],
-                    "cache": false,
-                    "train_ratio": 0.9,
-                    "shuffle": true,
-                    "sample_range": [2000, 3000],
-                    "images_suffix": [".bmp"]
-                },
-                "transforms": {
-                    "kwargs": {
-                        "histogram": {"p": 1},
-                        "Normalize": {"mean": 0, "std": 1, "p": 1}
-                    }
-            }
-            },
-```
-
-### 🍛ClsDataloaderTrain
-
-[source](../core/modules/dataloaders/ClsDataloader.py)
-
-**构造函数**
-
-```
-def ClsDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0, **kwargs):
-```
-
-**configs**
-
-```
- "dataloader": {
-        "type": "ClsDataloaderTrain",
-        "dataset": {
-            "type": "ClsDataset",
-            "kwargs": {
-                "data_dir": "/root/data/DAO/screen",
-                "image_set": "train.txt",
-                "in_channels": 1,
-                "input_size": [224, 224],
-                "cache": false,
-                "train_ratio": 0.9,
-                "shuffle": true,
-                "sample_range": [2000, 3000],
-                "images_suffix": [".bmp"]
-            },
-            "transforms": {
-                "kwargs": {
-                    "histogram": {"p": 1},
-                    "Normalize": {"mean": 0, "std": 1, "p": 1}
-                }
-            }
-        },
-        "kwargs": {
-            "num_workers": 4,
-            "batch_size": 256
-        }
-    },
-```
-
-### 🥩ClsDataloaderEval
-
-[source](../core/modules/dataloaders/ClsDataloader.py)
-
-**构造函数**
-
-```
-def ClsDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, dataset=None, **kwargs):
-```
-
-**configs**
-
-```
-"dataloader": {
-    "type": "ClsDataloaderEval",
-    "dataset": {
-        "type": "ClsDataset",
-        "kwargs": {
-            "data_dir": "/root/data/DAO/screen",
-            "image_set": "val.txt",
-            "in_channels": 1,
-            "input_size": [224, 224],
-            "cache": false,
-            "train_ratio": 0.9,
-            "shuffle": true,
-            "sample_range": [2000, 3000],
-            "images_suffix": [".bmp"]
-        },
-        "transforms": {
-            "kwargs": {
-                "histogram": {"p": 1},
-                "Normalize": {"mean": 0, "std": 1, "p": 1}
-            }
-    }
-    },
-    "kwargs": {
-        "num_workers": 4,
-        "batch_size": 256
-    }
-},
-```
-
-### MVTecDataset
-
-```
-MVTecDataset(
-    data_dir=None,
-    preproc=None,
-    image_set="",
-    in_channels=1,
-    input_size=(224, 224),
-    cache=False,
-    image_suffix=".png",
-    mask_suffix=".png",
-    **kwargs
-)
-```
-
-异常检测数据集，（MVTecDataset类型）
-
-**1. 构造函数**
-
-- data_dir:str  数据集文件夹路径，文件夹要求是
-      📂datasets
-      ┗ 📂your_custom_dataset
-      ┣ 📂 ground_truth
-      ┃ ┣ 📂 defective_type_1
-      ┃ ┗ 📂 defective_type_2
-      ┣ 📂 test
-      ┃ ┣ 📂 defective_type_1
-      ┃ ┣ 📂 defective_type_2
-      ┃ ┗ 📂 good
-      ┗ 📂 train
-      ┃ ┗ 📂 good
-- preproc:albumentations.Compose 对图片进行预处理
-- image_set:str "train.txt or val.txt or test.txt"
-- in_channels:int  输入图片的通道数，目前只支持1和3通道
-- input_size:tuple 输入图片的HW
-- cache:bool 是否对图片进行内存缓存
-- image_suffix:str 可接受的图片后缀
-- mask_suffix:str 可接受的图片后缀
+- 
 
 **2.configs.json**
 
 ## 4. losses
 
-### 🍗CrossEntropyLoss
+### 🍗CrossEntropyLoss √
 
 [source](../core/modules/losses/CrossEntropyLoss.py)
 
@@ -708,7 +753,7 @@ def CrossEntropyLoss(weight=None, ignore_index=255, reduction='mean')
 
 ## 5. scheduler
 
-### 🍖warm_cos_lr
+### 🍖warm_cos_lr √
 
 [source](../core/modules/schedulers/warm_cos_lr.py)
 
@@ -797,7 +842,7 @@ evaluate(self, model, distributed=False, half=False, device=None)
     }
 ```
 
-### 🍠ClsEvaluator
+### 🍠ClsEvaluator √
 
 [source](../core/modules/evaluators/ClsEvaluator.py)
 
@@ -805,7 +850,21 @@ evaluate(self, model, distributed=False, half=False, device=None)
 
 ```
 class ClsEvaluator:
-    def __init__(self, is_distributed=False, dataloader=None, num_classes=None, is_industry=False, industry=None):
+    def __init__(self,
+                 is_distributed=False,
+                 dataloader=None,
+                 num_classes=None,
+                 is_industry=False,
+                 industry=None,
+                 target_layer="conv_head"):
+        """
+        验证器
+        is_distributed:bool 是否是分布式
+        dataloader:dict dataloader的配置字典
+        num_classes:int 类别数
+        is_industry:bool 是否使用工业方法验证，即输出过漏检
+        industry:dict 使用工业验证方法所需的参数
+        """
 ```
 
 **configs**
@@ -823,9 +882,6 @@ class ClsEvaluator:
                     "in_channels": 1,
                     "input_size": [224, 224],
                     "cache": false,
-                    "train_ratio": 0.9,
-                    "shuffle": true,
-                    "sample_range": [2000, 3000],
                     "images_suffix": [".bmp"]
                 },
                 "transforms": {
@@ -849,4 +905,6 @@ class ClsEvaluator:
 ```
 
 ## 7. trainer
+
+### 🥨ClsTrainer
 

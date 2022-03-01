@@ -2,18 +2,18 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Megvii, Inc. and its affiliates.
 
-from copy import deepcopy
-from core.trainers.utils import is_parallel
 import os
 import cv2
-import numpy as np
-import shutil
-from PIL import Image
-import itertools
-import matplotlib.pyplot as plt
 import time
+import shutil
+import itertools
+from PIL import Image
+import numpy as np
+import matplotlib.pyplot as plt
 from loguru import logger
 from tqdm import tqdm
+from copy import deepcopy
+
 
 import torch
 from torchcam.methods import SmoothGradCAMpp, CAM
@@ -21,22 +21,35 @@ from torchcam.utils import overlay_mask
 import torch.nn.functional as F
 from torchvision.transforms.functional import normalize, resize, to_pil_image
 
-from core.modules.utils import MeterClsEval
+from core.trainers.utils import MeterClsEval, is_parallel
 from core.utils import is_main_process, synchronize, time_synchronized, gather
+
 from core.modules.register import Registers
 
 
 @Registers.evaluators.register
 class ClsEvaluator:
-    def __init__(self, is_distributed=False, dataloader=None, num_classes=None, is_industry=False, industry=None,
+    def __init__(self,
+                 is_distributed=False,
+                 dataloader=None,
+                 num_classes=None,
+                 is_industry=False,
+                 industry=None,
                  target_layer="conv_head"):
+        """
+        验证器
+        is_distributed:bool 是否是分布式
+        dataloader:dict dataloader的配置字典
+        num_classes:int 类别数
+        is_industry:bool 是否使用工业方法验证，即输出过漏检
+        industry:dict 使用工业验证方法所需的参数
+        """
         self.dataloader, self.iters_per_epoch = Registers.dataloaders.get(dataloader.type)(
             is_distributed=is_distributed,
             dataset=dataloader.dataset,
             **dataloader.kwargs
         )
         self.meter = MeterClsEval(num_classes)
-        self.best_acc = 0
         self.num_class = num_classes
         self.is_industry = is_industry
         self.industry = industry
@@ -134,22 +147,10 @@ class ClsEvaluator:
                 ljl = float(ljc) / total_len  # 漏检率
 
                 logger.info("过检率：{}\n漏检率：{}\n".format(gjl, ljl))
+                with open(os.path.join(output_dir, "glj.txt"), 'w', encoding='utf-8') as glj_file:
+                    glj_file.write("gjl:{}\n".format(gjl))
+                    glj_file.write("ljl:{}\n".format(ljl))
                 return
-                # self.meter.update(
-                #     outputs=torch.cat([output.to(device=device) for output in output_s]),
-                #     targets=torch.cat([output.to(device=device) for output in target_s])
-                # )
-                # self.meter.eval_confusionMatrix(
-                #     preds=torch.cat([output.to(device=device) for output in output_s]),
-                #     labels=torch.cat([output.to(device=device) for output in target_s])
-                # )
-                #
-                # top1 = self.meter.precision_top1.avg
-                # top2 = self.meter.precision_top2.avg
-                # confu_ma = self.meter.confusion_matrix
-                # self.meter.precision_top1.initialized = False
-                # self.meter.precision_top2.initialized = False
-                # self.meter.confusion_matrix = [[0 for j in range(self.num_class)] for i in range(self.num_class)]
             else:   # for train and eval
                 self.meter.update(
                     outputs=torch.cat([output.to(device=device) for output in output_s]),
@@ -162,6 +163,7 @@ class ClsEvaluator:
 
                 top1 = self.meter.precision_top1.avg
                 top2 = self.meter.precision_top2.avg
+                logger.info("top1:{}, top2:{}".format(top1, top2))
                 confu_ma = self.meter.confusion_matrix
                 self.meter.precision_top1.initialized = False
                 self.meter.precision_top2.initialized = False

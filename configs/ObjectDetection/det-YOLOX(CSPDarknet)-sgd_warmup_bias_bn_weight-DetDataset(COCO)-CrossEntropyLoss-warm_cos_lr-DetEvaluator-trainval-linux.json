@@ -22,11 +22,11 @@
         },
 
         "warmup_epochs": 5,
-        "no_aug_epochs": 5,
+        "no_aug_epochs": 15,
         "max_epochs": 300,
 
         "ckpt": "/root/code/DAO/saved/det-YOLOX(CSPDarknet)-sgd_warmup_bias_bn_weight-DetDataset(COCO)-CrossEntropyLoss-warm_cos_lr-DetEvaluator-trainval-linux/01-27_16-21/last_epoch_ckpt.pth",
-        "resume": true,
+        "resume": false,
 
         "amp": true,
         "occupy": false,

@@ -15,7 +15,7 @@ import torch
 
 from core.utils import is_main_process, synchronize, time_synchronized, gather, get_world_size
 from core.modules.register import Registers
-from core.modules.utils import MeterDetEval
+from core.trainers.utils import MeterDetEval
 from core.modules.utils import postprocess, xyxy2xywh
 from core.utils import gather, is_main_process, synchronize, time_synchronized
 

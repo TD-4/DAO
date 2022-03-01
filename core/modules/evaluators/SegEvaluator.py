@@ -9,7 +9,7 @@ import torch
 
 from core.utils import is_main_process, synchronize, time_synchronized, gather, get_world_size
 from core.modules.register import Registers
-from core.modules.utils import MeterSegEval
+from core.trainers.utils import MeterSegEval
 
 
 @Registers.evaluators.register

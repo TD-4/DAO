@@ -12,7 +12,6 @@ from .ClsEvaluator import ClsEvaluator
 from .SegEvaluator import SegEvaluator
 
 # iqa
-from .IQAEvaluator import IQAEvaluator
 
 # det
 from .DetEvaluator import DetEvaluator

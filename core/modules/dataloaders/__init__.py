@@ -4,6 +4,8 @@
 # @GitHub:https://github.com/felixfu520
 # @Copy From:
 
+# dataset
+from .datasets import MVTecDataset, ClsDataset, DetDataset, SegDataset
 
 # classification
 from .ClsDataloader import ClsDataloaderTrain, ClsDataloaderEval
