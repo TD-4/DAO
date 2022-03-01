@@ -22,7 +22,6 @@ class MVTecDataset(Dataset):
                  preproc=None,
                  image_set="",
                  in_channels=1,
-                 input_size=(224, 224),
                  cache=False,
                  image_suffix=".png",
                  mask_suffix=".png",
@@ -32,22 +31,20 @@ class MVTecDataset(Dataset):
         异常检测数据集，（MVTecDataset类型）
 
         data_dir:str  数据集文件夹路径，文件夹要求是
-            📂datasets
-             ┗ 📂your_custom_dataset
-              ┣ 📂 ground_truth
-              ┃ ┣ 📂 defective_type_1
-              ┃ ┗ 📂 defective_type_2
-              ┣ 📂 test
-              ┃ ┣ 📂 defective_type_1
-              ┃ ┣ 📂 defective_type_2
-              ┃ ┗ 📂 good
-              ┗ 📂 train
-              ┃ ┗ 📂 good
+            📂datasets 数据集名称
+              ┣ 📂 ground_truth  test测试文件夹对应的mask
+              ┃     ┣ 📂 defective_type_1    异常类别1 mask（0，255）
+              ┃     ┗ 📂 defective_type_2    异常类别2 mask
+              ┣ 📂 test  测试文件夹
+              ┃     ┣ 📂 defective_type_1    异常类别1 图片
+              ┃     ┣ 📂 defective_type_2    异常类别2 图片
+              ┃     ┗ 📂 good
+              ┗ 📂 train 训练文件夹
+              ┃     ┗ 📂 good
 
         preproc:albumentations.Compose 对图片进行预处理
-        image_set:str "train.txt or val.txt or test.txt"
+        image_set:str "train.txt or val.txt or test.txt"； train.txt是训练，其余是测试
         in_channels:int  输入图片的通道数，目前只支持1和3通道
-        input_size:tuple 输入图片的HW
         cache:bool 是否对图片进行内存缓存
         image_suffix:str 可接受的图片后缀
         mask_suffix:str 可接受的图片后缀
@@ -57,24 +54,23 @@ class MVTecDataset(Dataset):
         self.preproc = preproc
         self.is_train = True if image_set == "train.txt" else False
         self.in_channels = in_channels
-        self.img_size = input_size
         self.image_suffix = image_suffix
         self.mask_suffix = mask_suffix
 
         # 存储image-mask pair
-        self.x, self.y, self.mask = self.load_dataset_folder()
+        self.x, self.y, self.mask = self.load_dataset_folder()  # x存放图片的路径；y标志此图片是否是good，good为0，非good为1；mask存放mask图片路径，good为空；
 
         if cache:
             logger.warning("MVTecDataset not supported cache !")
 
     def __getitem__(self, index):
-        image, mask, label, image_path = self.pull_item(index)  # image:ndarray, label:ndarray, image_path:string
+        image, mask, label, image_path = self.pull_item(index)  # image:ndarray, 图片；mask:ndarray,掩码；label:int，是否有mask； image_path:string，图片路径
         if self.preproc is not None:
             transformed = self.preproc(image=image, mask=mask)
             image, mask = transformed['image'], transformed["mask"]
         image = image.transpose(2, 0, 1)  # c, h, w
-        mask = mask.astype(np.int64)  # c, h, w
-        return image, mask, label, image_path
+        mask = mask.astype(np.int64)
+        return image, mask, label, image_path  # image:ndarray, 图片；mask:ndarray,掩码；label:int，是否有mask； image_path:string，图片路径
 
     def pull_item(self, index):
         img, mask = self._load_img(index)
@@ -108,17 +104,21 @@ class MVTecDataset(Dataset):
 
     def load_dataset_folder(self):
         phase = 'train' if self.is_train else 'test'
-        x, y, mask = [], [], []
+        x, y, mask = [], [], []     # x存放图片的路径，y标志此图片是否是good（0），mask存放mask图片路径
 
-        img_dir = os.path.join(self.root, phase)
-        gt_dir = os.path.join(self.root, 'ground_truth')
+        # 获得dataset目录下的所有文件夹，即train、test、ground_truth
+        img_dir = os.path.join(self.root, phase)    # 训练集或测试集文件夹
+        gt_dir = os.path.join(self.root, 'ground_truth')    # 真实mask文件夹
 
-        img_types = sorted(os.listdir(img_dir))
-        for img_type in img_types:
+        # 如果是train，则只有good
+        # 如果是test，则有good、其他异常类别
+        img_types = sorted(os.listdir(img_dir))  # good、其他异常类别
+        for img_type in img_types:  # 处理每个异常类别（包括good），train和test情况。
             # load images
             img_type_dir = os.path.join(img_dir, img_type)
             if not os.path.isdir(img_type_dir):
                 continue
+            # 遍历其中一个类别下的所有文件
             img_fpath_list = sorted([os.path.join(img_type_dir, f)
                                      for f in os.listdir(img_type_dir)
                                      if f.endswith(self.image_suffix)])
@@ -153,22 +153,29 @@ class MVTecDataset(Dataset):
 if __name__ == "__main__":
     from core.modules.dataloaders.augments import get_transformer
     from dotmap import DotMap
-    kk = {
+    dataset_c = {
+        "type": "MVTecDataset",
         "kwargs": {
-            "Resize": {"p": 1, "height": 224, "width": 224, "interpolation": 0},
-            "Normalize": {"mean": 0, "std": 1, "p": 1}
+            "data_dir": "/root/data/DAO/mvtec_anomaly_detection/bottle",
+            "image_set": "test.txt",
+            "in_channels": 3,
+            "cache": True,
+            "image_suffix": ".png",
+            "mask_suffix": ".png"
+        },
+        "transforms": {
+            "kwargs": {
+                "Resize": {"height": 224, "width": 224, "p": 1, "interpolation": 0},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
+
+
+            }
         }
     }
-
-    dataset = MVTecDataset(
-        data_dir="/root/data/DAO/mvtec_anomaly_detection/bottle",
-        preproc=get_transformer(kk["kwargs"]),
-        image_set="val.txt",
-        in_channels=1,
-        input_size=(224, 224),
-        cache=True
-    )
+    dataset_c = DotMap(dataset_c)
+    transformer = get_transformer(dataset_c.transforms.kwargs)
+    dataset = MVTecDataset(preproc=transformer, **dataset_c.kwargs)
 
     for i in range(len(dataset)):
-        img, mask, img_p = dataset.__getitem__(i)
+        img, mask, label, img_p = dataset.__getitem__(i)
         print("image path:{}-->mask unique:{}".format(img_p, np.unique(mask)))
