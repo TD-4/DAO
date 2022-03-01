@@ -452,7 +452,14 @@ class ClsDemo:
                                                                np.exp(output.cpu().detach().numpy().squeeze()))
             logger.info("Image:{}\n pred:{}, and scores:{:4f}".format(img_p, top1_id, top1_scores))
             results.append((img_p, top1_id, top1_scores))
-        return results
+        logger.info("输出结果到{}文件中".format(os.path.join(self.output_dir, "result.txt")))
+        with open(os.path.join(self.output_dir, "result.txt"), 'w', encoding='utf-8') as result_file:
+            for temp in results:
+                img_p = temp[0]
+                top1_id = temp[1]
+                top1_scores = temp[2]
+                result_file.write("Image:{} pred:{} scores:{:4f}\n".format(img_p, top1_id, top1_scores))
+        return
 
 
 @Registers.trainers.register
