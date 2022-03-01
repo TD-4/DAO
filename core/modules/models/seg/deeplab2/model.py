@@ -413,7 +413,7 @@ if __name__ == '__main__':
         "kwargs": {
             "num_classes":21,
             "in_channels":3,
-            "backbone":"resnet",
+            "backbone":"resnet101",
             "pretrained":True,
             "freeze_bn":False,
             "freeze_backbone": False
@@ -434,7 +434,7 @@ if __name__ == '__main__':
     torch.onnx.export(model,
                       x,
                       "/root/code/onnx_nadmfe.onnx",
-                      opset_version=13,
+                      opset_version=10,
                       export_params=True,
                       do_constant_folding=True,
                       verbose=True,

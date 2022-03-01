@@ -191,7 +191,7 @@ if __name__ == '__main__':
     torch.onnx.export(model,
                       x,
                       "/root/code/onnx_name.onnx",
-                      opset_version=13,
+                      opset_version=11,
                       input_names=["input"],
                       output_names=["output"])
 # if __name__ == '__main__':

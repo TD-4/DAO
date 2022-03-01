@@ -1,0 +1,72 @@
+{
+    "name": "seg-DeepLabV3Plus2(resnet50)-SegDataset(VOC)-SegEvaluator-eval-linux",
+    "type": "seg",
+    "seed": 0,
+
+    "envs": {
+        "type": "linux",
+        "gpus": {
+            "dist_backend": "nccl",
+            "dist_url": null,
+            "devices": 1,
+            "num_machines": 1,
+            "machine_rank": 0
+        }
+    },
+    "trainer": {
+        "type": "SegEval",
+        "log": {
+            "log_dir": "/root/code/DAO/saved",
+            "log_per_iter": 10,
+            "eval_interval": 1
+        },
+
+        "ckpt": "/root/code/DAO/pretrained/seg/seg-DeepLabV3Plus2(resnet50)-sgd_warmup_bias_bn_weight-SegDataset(VOC)-CrossEntropyLoss-warm_cos_lr-SegEvaluator-trainval-linux/01-24_19-11/best_ckpt.pth",
+        "resume": false
+    },
+    "model": {
+        "type": "DeepLabV3Plus2",
+        "summary_size": [3,480,480],
+        "backbone": {
+            "kwargs": {
+            }
+        },
+        "kwargs": {
+             "num_classes": 21,
+             "backbone": "resnet101",
+             "in_channels":3,
+             "pretrained":true,
+             "freeze_bn":false,
+             "freeze_backbone": false
+        }
+    },
+    "evaluator": {
+        "type": "SegEvaluator",
+        "dataloader": {
+            "type": "SegDataloaderEval",
+            "dataset": {
+                "type": "SegDataset",
+                "kwargs": {
+                    "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
+                    "image_set": "val.txt",
+                    "in_channels": 3,
+                    "input_size": [480, 480],
+                    "cache": false,
+                    "image_suffix":".jpg",
+                    "mask_suffix":".png"
+                },
+                "transforms": {
+                    "kwargs": {
+                        "Resize": {"height": 480, "width": 480, "p": 1},
+                        "Normalize": {"mean": [0.45734706, 0.43338275, 0.40058118], "std": [0.23965294, 0.23532275, 0.2398498], "p": 1}
+                    }
+                }
+            },
+            "kwargs": {
+                "num_workers": 8,
+                "batch_size": 32
+            }
+        }
+
+    }
+}

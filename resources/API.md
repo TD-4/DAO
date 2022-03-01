@@ -566,14 +566,17 @@ def TIMMC(backbone_kwargs):
     }
 ```
 
-### 🧂Unet
+### 🧂Unet √
 
-[source](../core/modules/models/seg/unet/model.py)
+[source](../core/modules/models/seg/unet/model.py)|[notes](https://github.com/FelixFu520/README/blob/main/train/segmentation/unet.md)
 
 **构造函数**
 
 ```
-class Unet( encoder,
+class Unet(SegmentationModel):
+    def __init__(
+            self,
+            encoder,
             encoder_depth=5,
             encoder_channels=None,
             decoder_use_batchnorm: bool = True,
@@ -582,46 +585,50 @@ class Unet( encoder,
             num_classes=2,
             activation: Optional[Union[str, callable]] = None,
             aux_params: Optional[dict] = None,
-    )
-"""
-encoder: dict encoder的配置字典
-encoder_depth: encoder深度
-encoder_channels: encoder 的每一层channel数
-decoder_use_batchnorm: bool
-decoder_channels: List[int] = (256, 128, 64, 32, 16),
-decoder_attention_type: Optional[str] = None,
-num_classes=2,
-activation: Optional[Union[str, callable]] = None,
-aux_params: Optional[dict] = None,
-"""
+    ):
+        """
+        Unet 继承自SegmentationModel，由4个组件组成，即encoder（backbone）不在此处定义、decoder、segmentation_Head、classificationHead；
+            encoder: dict encoder的配置字典
+            encoder_depth: encoder深度
+            encoder_channels: encoder 的每一层channel数
+            decoder_use_batchnorm: bool 是否使用batchnorm
+            decoder_channels: List[int] = (256, 128, 64, 32, 16),   # decoder的通道数
+            decoder_attention_type: Optional[str] = None,   decoder的attention类型
+            num_classes=2,  类别数，包括背景，假如例如VOC是21，其中一类是背景
+            activation: Optional[Union[str, callable]] = None,  激活函数
+            aux_params: Optional[dict] = None,  分类辅助分支
+        """
 ```
 
 **configs.json**
 
 ```
 "model": {
-        "type": "Unet",
-        "summary_size": [3,224,224],
+       "type": "Unet",
+        "summary_size": [1, 224, 224],
         "backbone": {
             "kwargs": {
                 "model_name": "resnet18",
-                "pretrained": true,
+                "pretrained": True,
                 "checkpoint_path": "",
-                "exportable": true,
+                "exportable": True,
                 "in_chans": 3,
-                "features_only": true
+                "features_only": True,
+                # "out_indices": [1, 3, 4]
             }
         },
         "kwargs": {
             "encoder_depth": 5,
             "encoder_channels": [3, 64, 64, 128, 256, 512],
+            "decoder_use_batchnorm": True,
             "decoder_channels": [256, 128, 64, 32, 16],
-            "num_classes": 21
+            "num_classes": 21,
+            "aux_params": None,
         }
     }
 ```
 
-### 🍦UNet++
+### 🍦UNet++ √
 
 [source](../core/modules/models/seg/unetplusplus/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/unetpp.md)
 
@@ -682,7 +689,7 @@ UnetPlusPlus通过`__init__`函数初始化，通过`forward`函数返回想要�
 
 ![](models/imgs/20220111150339.jpg)
 
-### 🍺PSPNet
+### 🍺PSPNet √
 
 [source](../core/modules/models/seg/pspnet/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/pspnet.md)
 
@@ -767,13 +774,45 @@ class PSPNet(SegmentationModel):
 
 ![](models/imgs/20220113145704.jpg)
 
-### Deeplab
+### 🍻PSPNet2 √
+
+[source](../core/modules/models/seg/pspnet2/model.py) 
+
+**构造函数**
+
+```
+class PSPNet2(nn.Module):
+    def __init__(self, backbones=None, num_classes=21, in_channels=3, backbone='resnet152', pretrained=True, use_aux=True, freeze_bn=False,
+                 freeze_backbone=False, aux_params=None):
+```
+
+**configs.json**
+
+```
+"model":{
+		"type": "PSPNet2",
+        "summary_size": [3,224,224],
+        "kwargs": {
+            "num_classes":21,
+            "in_channels":3,
+            "backbone":"resnet50",
+            "pretrained":True,
+            "use_aux":True,
+            "freeze_bn":False,
+            "freeze_backbone": False
+        }
+    }
+```
+
+### DeepLabV3
 
 [source](../core/modules/models/seg/deeplab/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/pspnet.md)
+
+### DeepLabV3Plus
+
+### DeepLabV3Plus2
 
 ### Yolox
-
-[source](../core/modules/models/seg/deeplab/model.py) | [note](https://github.com/FelixFu520/README/blob/main/train/segmentation/pspnet.md)
 
 ## 3. optims
 
@@ -1011,12 +1050,15 @@ class ClsEvaluator:
 
 [source](../core/trainers/trainerCls.py)
 
-- ClsTrainer：train方法， return 0；结果保存成文件
-- ClsEval：eval方法， return 0；结果保存成文件
-- ClsDemo：demo方法， return 0；结果保存成文件
-- ClsExport：export方法， return 0；结果保存成文件
+- ClsTrainer：train方法， return 0, 结果保存成文件的位置
+- ClsEval：eval方法， return 0, 结果保存成文件的位置
+- ClsDemo：demo方法， return 0, 结果保存成文件的位置
+- ClsExport：export方法， return 0, 结果保存成文件的位置
 
-### 🍝Seg
+### 🍝Seg √
 
-Trainer
+- SegTrainer：train方法， return 0, 结果保存成文件的位置
+- SegEval：eval方法， return 0, 结果保存成文件的位置
+- SegDemo：demo方法， return 0, 结果保存成文件的位置
+- SegExport：export方法， return 0, 结果保存成文件的位置
 

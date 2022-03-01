@@ -6,9 +6,11 @@
 # @Copy From:
 
 import os
+import shutil
 import time
 import datetime
 import numpy as np
+from tqdm import tqdm
 from PIL import Image
 from loguru import logger
 
@@ -19,11 +21,19 @@ from torch.utils.tensorboard import SummaryWriter
 
 from core.utils import get_rank, get_local_rank, get_world_size, all_reduce_norm, synchronize
 from core.trainers.utils import (
-    setup_logger, load_ckpt, save_checkpoint, occupy_mem,
-    ModelEMA, EMA, is_parallel, gpu_mem_usage,
-    get_palette, colorize_mask
+    setup_logger,
+    load_ckpt,
+    save_checkpoint,
+    occupy_mem,
+    ModelEMA,
+    EMA,
+    is_parallel,
+    gpu_mem_usage,
+    get_palette,
+    colorize_mask,
+    MeterSegTrain,
+    denormalization
 )
-from core.trainers.utils import MeterSegTrain, denormalization
 from core.modules.dataloaders.augments import get_transformer
 from core.modules.register import Registers
 
@@ -49,6 +59,7 @@ class SegTrainer:
                 self._after_iter()
             self._after_epoch()
         self._after_train()
+        return 0, self.output_dir
 
     def _before_train(self):
         """
@@ -61,8 +72,7 @@ class SegTrainer:
         7.Scheduler Setting;
         8.Evaluator Setting;
         """
-        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
-            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"train_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")
@@ -322,9 +332,13 @@ class SegEval:
 
     def eval(self):
         self._before_eval()
-        self.evaluator.evaluate(self.model, get_world_size() > 1,
-                                                               device="cuda:{}".format(get_local_rank()),
-                                                               output_dir=self.output_dir)
+        pixAcc, mIoU, Class_IoU_dict = self.evaluator.evaluate(
+            self.model, get_world_size() > 1,
+            device="cuda:{}".format(get_local_rank()))
+        logger.info("pixACC:{}\nmIoU:{}\nClass_IoU_dict:{}".format(pixAcc, mIoU, Class_IoU_dict))
+        with open(os.path.join(self.output_dir, "result.txt"), 'w', encoding='utf-8') as result_file:
+            result_file.write("pixACC:{}\nmIoU:{}\nClass_IoU_dict:{}".format(pixAcc, mIoU, Class_IoU_dict))
+        return 0, self.output_dir
 
     def _before_eval(self):
         """
@@ -332,8 +346,7 @@ class SegEval:
         2.Model Setting;
         3.Evaluator Setting;
         """
-        self.output_dir = os.getcwd() if self.exp.trainer.log.log_dir is None else \
-            os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
         setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"val_log.txt", mode="a")
         logger.info("....... Train Before, Setting something ...... ")
         logger.info("1. Logging Setting ...")
@@ -343,10 +356,9 @@ class SegEval:
 
         logger.info("2. Model Setting ...")
         torch.cuda.set_device(get_local_rank())
-        model = Registers.cls_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
+        model = Registers.seg_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
-        summary(model, input_size=tuple(self.exp.model.summary_size),
-                device="{}".format(next(model.parameters()).device))  # log torchsummary model
+        # summary(model, input_size=tuple(self.exp.model.summary_size), device="{}".format(next(model.parameters()).device))  # log torchsummary model
         model.to("cuda:{}".format(get_local_rank()))  # model to self.device
 
         ckpt_file = self.exp.trainer.ckpt
@@ -360,16 +372,13 @@ class SegEval:
         self.model = model
         self.model.eval()
 
-        logger.info("8. Evaluator Setting ... ")
+        logger.info("9. Evaluator Setting ... ")
         self.evaluator = Registers.evaluators.get(self.exp.evaluator.type)(
             is_distributed=get_world_size() > 1,
             dataloader=self.exp.evaluator.dataloader,
             num_classes=self.exp.model.kwargs.num_classes,
-            industry=self.exp.evaluator.industry,
-            **self.exp.evaluator.kwargs
         )
-        self.train_metrics = MeterSegTrain(self.exp.model.kwargs.num_classes)
-        logger.info("Now Eval Start ......")
+        logger.info("Now Training Start ......")
 
 
 @Registers.trainers.register
@@ -378,19 +387,35 @@ class SegDemo:
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
 
-        self.model = self._get_model()
-        self.images = self._get_images()  # ndarray
+    def _before_demo(self):
+        """
+        1.Logger Setting
+        2.Model Setting;
+        """
+        self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"demo_log.txt", mode="a")
+        logger.info("....... Train Before, Setting something ...... ")
+        logger.info("1. Logging Setting ...")
+        logger.info(f"create log file {self.output_dir}/demo_log.txt")  # log txt
+        logger.info("exp value:\n{}".format(self.exp))
 
-    def _get_model(self):
+        logger.info("2. Model Setting ...")
         logger.info("model setting, on cpu")
-        model = Registers.seg_models.get(self.exp.model.type)(self.exp.model.backbone, **self.exp.model.kwargs)  # get model from register
-        logger.info("\n{}".format(model))  # log model structure
-        summary(model, input_size=tuple(self.exp.model.summary_size),
-                device="{}".format(next(model.parameters()).device))  # log torchsummary model
-        ckpt = torch.load(self.exp.model.ckpt, map_location="cpu")["model"]
-        model = load_ckpt(model, ckpt)
-        model.eval()
-        return model
+        self.model = Registers.seg_models.get(self.exp.model.type)(self.exp.model.backbone, **self.exp.model.kwargs)
+        if self.exp.envs.gpus.devices == 1:
+            self.model.to("cuda:0")
+        logger.info("\n{}".format(self.model))  # log model structure
+        # summary(model, input_size=tuple(self.exp.model.summary_size), device="{}".format(next(model.parameters()).device))  # log torchsummary model
+        if self.exp.envs.gpus.devices == 1:
+            ckpt = torch.load(self.exp.trainer.ckpt, map_location="cpu")["model"]
+        else:
+            ckpt = torch.load(self.exp.trainer.ckpt, map_location="cuda:0")["model"]
+
+        self.model = load_ckpt(self.model, ckpt)
+
+        self.model.eval()
+
+        self.images = self._get_images()  # ndarray
 
     def _img_ok(self, img_p):
         flag = False
@@ -422,16 +447,23 @@ class SegDemo:
         return results
 
     def demo(self):
+        self._before_demo()
         results = []
-        for image, shape, img_p in self.images:
+        for image, shape, img_p in tqdm(self.images):
             image = torch.tensor(image).unsqueeze(0)  # 1, c, h, w
+            if self.exp.envs.gpus.devices == 1:
+                image = image.to(device="cuda:0")  # 1, c, h, w
             output = self.model(image)
+            if self.exp.envs.gpus.devices == 1:
+                output = output.to(device="cpu")
             output = np.uint8(output.data.max(1)[1].cpu().numpy()[0])
             output = colorize_mask(output, get_palette(self.exp.model.kwargs.num_classes))
             output = output.resize((shape[1], shape[0]))
             results.append((output, img_p))
+        os.makedirs(os.path.join(self.output_dir, "demo_result"), exist_ok=True)
         for i, (image, img_p) in enumerate(results):
-            image.save(img_p[:-4]+".png")
+            shutil.copy(img_p, os.path.join(self.output_dir, "demo_result", os.path.basename(img_p)[:-4]+".jpg"))
+            image.save(os.path.join(self.output_dir, "demo_result", os.path.basename(img_p)[:-4]+".png"))
         return results
 
 
@@ -440,15 +472,25 @@ class SegExport:
     def __init__(self, exp):
         self.exp = exp  # DotMap 格式 的配置文件
         self.start_time = datetime.datetime.now().strftime('%m-%d_%H-%M')  # 此次trainer的开始时间
+
+        self._log_setting()
         self.model = self._get_model()
+
+    def _log_setting(self):
+        self.output_dir = os.path.join(self.exp.trainer.log.log_dir, self.exp.name, self.start_time)
+        setup_logger(self.output_dir, distributed_rank=get_rank(), filename=f"export_log.txt", mode="a")
+        logger.info("....... Train Before, Setting something ...... ")
+        logger.info("1. Logging Setting ...")
+        logger.info(f"create log file {self.output_dir}/export_log.txt")  # log txt
+        logger.info("exp value:\n{}".format(self.exp))
 
     def _get_model(self):
         logger.info("model setting, on cpu")
         model = Registers.seg_models.get(self.exp.model.type)(**self.exp.model.kwargs)  # get model from register
         logger.info("\n{}".format(model))  # log model structure
-        summary(model, input_size=tuple(self.exp.model.summary_size),
-                device="{}".format(next(model.parameters()).device))  # log torchsummary model
-        ckpt = torch.load(self.exp.model.ckpt, map_location="cpu")["model"]
+        # summary(model, input_size=tuple(self.exp.model.summary_size),
+        #         device="{}".format(next(model.parameters()).device))  # log torchsummary model
+        ckpt = torch.load(self.exp.trainer.ckpt, map_location="cpu")["model"]
         model = load_ckpt(model, ckpt)
         model.eval()
         return model
@@ -456,7 +498,8 @@ class SegExport:
     @logger.catch
     def export(self):
         x = torch.randn(self.exp.onnx.x_size)
-        onnx_path = self.exp.onnx.onnx_path
+        onnx_path = self.exp.onnx.onnx_path if self.exp.onnx.onnx_path else os.path.join(self.output_dir, self.exp.name + ".onnx")
+        logger.info("生成文件onnx:{}".format(onnx_path))
         torch.onnx.export(self.model,
                           x,
                           onnx_path,
