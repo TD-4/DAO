@@ -35,8 +35,10 @@ class SegDataset(Dataset):
                 |- images
                     |-图片
                 |- masks
+                    |-图片
                 |- train.txt
                 |- val.txt
+                |- test.txt
                 |- labels.txt
 
         image_set:str "train.txt or val.txt or test.txt"
@@ -45,7 +47,7 @@ class SegDataset(Dataset):
         preproc:albumentations.Compose 对图片进行预处理
         cache:bool 是否对图片进行内存缓存
         images_suffix:str 可接受的图片后缀
-        mask_suffix:str
+        mask_suffix:str 可接受的图片后缀
         """
         # set attr
         self.root = data_dir
@@ -57,9 +59,8 @@ class SegDataset(Dataset):
         self.mask_suffix = mask_suffix
 
         # 存储数据
-        self.ids = []
-        self.labels = list()
-        self.labels_dict = dict()
+        self.ids = []   # 存放图片路径 (image path, mask path)
+        self.labels_dict = dict()  # id:name形式
 
         self._set_ids()  # 获取所有文件名，存放到self.ids中 [(image_path, mask_path), ... ]
         self.imgs = None
@@ -132,7 +133,8 @@ class SegDataset(Dataset):
         )
         max_h = self.img_size[0]
         max_w = self.img_size[1]
-        cache_file = self.root + "/img_resized_cache.array"
+        cache_file = os.path.join(self.root, "img_resized_cache_{}.array".format(self.image_set[:-4]))
+
         if not os.path.exists(cache_file):
             logger.info("Caching images for the frist time. This might take sometime")
             # np.memmap为存储在磁盘上的二进制文件中的数组创建内存映射。
@@ -185,7 +187,8 @@ class SegDataset(Dataset):
         )
         max_h = self.img_size[0]
         max_w = self.img_size[1]
-        cache_file = self.root + "/mask_resized_cache.array"
+        cache_file = os.path.join(self.root, "mask_resized_cache_{}.array".format(self.image_set[:-4]))
+
         if not os.path.exists(cache_file):
             logger.info("Caching images for the frist time. This might take sometime")
             # np.memmap为存储在磁盘上的二进制文件中的数组创建内存映射。
@@ -237,7 +240,6 @@ class SegDataset(Dataset):
         with open(os.path.join(self.root, "labels.txt"), 'r', encoding='utf-8') as labels:
             for label in labels:
                 self.labels_dict[label.split()[0]] = label.split()[1]
-                self.labels.append(label.split()[1])
 
     def __len__(self):
         return len(self.ids)
