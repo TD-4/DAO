@@ -1,2 +1,2 @@
 from .version import __version__
-from .DAO import DAO
+from .DAO import DAO, DAODict
