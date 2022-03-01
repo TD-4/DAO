@@ -95,3 +95,45 @@ def SegDataloaderEval(is_distributed=False, batch_size=None, num_workers=None, d
     val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
     return val_loader, len(val_loader)
     # return DataPrefetcherSeg(val_loader), len(val_loader)
+
+
+if __name__ == "__main__":
+    from core.modules.dataloaders.augments import get_transformer
+    from dotmap import DotMap
+    from core.trainers.utils import denormalization
+    from core.modules.dataloaders.datasets import SegDataset
+    from PIL import Image
+    import cv2
+    from core.modules.register import Registers
+
+    dataloader_c = {
+        "type": "SegDataloaderTrain",
+        "dataset": {
+            "type": "SegDataset",
+            "kwargs": {
+                "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
+                "image_set": "val.txt",
+                "in_channels": 3,
+                "input_size": [380, 380],
+                "cache": False,
+                "image_suffix": ".jpg",
+                "mask_suffix": ".png"
+            },
+            "transforms": {
+                "kwargs": {
+                    "Resize": {"height": 224, "width": 224, "p": 1},
+                    "Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
+                }
+            }
+        },
+        "kwargs": {
+            "num_workers": 4,
+            "batch_size": 32
+        }
+    }
+
+    dataloader_c = DotMap(dataloader_c)
+    dataloader_train, length = Registers.dataloaders.get("SegDataloaderTrain")(
+        is_distributed=False, dataset=dataloader_c.dataset, **dataloader_c.kwargs)
+
+    print(dataloader_train, length)
