@@ -2,6 +2,12 @@
 
 ## 1. datasets & dataloaders
 
+### 🍖Albumentations √
+
+[albumentations 库 Github](https://github.com/albumentations-team/albumentations)
+
+[albumentations 库 Doc](https://albumentations.ai/docs/)
+
 ### 🍳ClsDataset √
 
 [source](../core/modules/dataloaders/datasets/ClsDataset.py)
@@ -179,71 +185,87 @@ def ClsDataloaderEval(
 
 
 
-### 🍟SegDataset
+### 🍟SegDataset √
 
 [source](../core/modules/dataloaders/datasets/SegDataset.py)
 
 **构造函数**
 
 ```
-Class SegDataset(data_dir=None, preproc=None, image_set="", in_channels=1, input_size=(224, 224), cache=False, image_suffix=".jpg", mask_suffix=".png"):
-"""
-	分割数据集
+class SegDataset(Dataset):
+    def __init__(self,
+                 data_dir=None,
+                 preproc=None,
+                 image_set="",
+                 in_channels=1,
+                 input_size=(224, 224),
+                 cache=False,
+                 image_suffix=".jpg",
+                 mask_suffix=".png",
+                 ):
+        """
+        分割数据集
 
-	data_dir:str  数据集文件夹路径，文件夹要求是
-           |-dataset
+        data_dir:str  数据集文件夹路径，文件夹要求是
+            |-dataset
                 |- images
                     |-图片
                 |- masks
+                    |-图片
+                |- train.txt
+                |- val.txt
+                |- test.txt
+                |- labels.txt
 
-    image_set:str "train.txt or val.txt or test.txt"
-    in_channels:int  输入图片的通道数，目前只支持1和3通道
-    input_size:tuple 输入图片的HW
-    preproc:albumentations.Compose 对图片进行预处理
-    cache:bool 是否对图片进行内存缓存
-    images_suffix:str 可接受的图片后缀
-    mask_suffix:str 可接受的图片后缀
-"""
+        image_set:str "train.txt or val.txt or test.txt"
+        in_channels:int  输入图片的通道数，目前只支持1和3通道
+        input_size:tuple 输入图片的HW
+        preproc:albumentations.Compose 对图片进行预处理
+        cache:bool 是否对图片进行内存缓存
+        images_suffix:str 可接受的图片后缀
+        mask_suffix:str 可接受的图片后缀
+        """
 ```
 
 **config.json**
 
 ```
 "dataset": {
-	"type": "SegDataset",
-	"kwargs": {
-		"data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
-		"image_set": "val.txt",
-        "in_channels": 3,
-        "input_size": [380, 380],
-        "cache": false,
-        "image_suffix":".jpg",
-        "mask_suffix":".png"
-	},
-    "transforms": {
-    	"kwargs": {
-    		"Resize": {"height": 224, "width": 224, "p": 1},
-    		"Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
-		}
-	}
+		"type": "SegDataset",
+        "kwargs": {
+            "data_dir": "/root/data/DAO/VOC2012_Seg_Aug",
+            "image_set": "train.txt",
+            "in_channels": 3,
+            "input_size": [380, 380],
+            "cache": True,
+            "image_suffix": ".jpg",
+            "mask_suffix": ".png"
+        },
+        "transforms": {
+            "kwargs": {
+                "Resize": {"height": 224, "width": 224, "p": 1},
+                "Normalize": {"mean": [0.398993, 0.431193, 0.452234], "std": [0.285205, 0.273126, 0.276610], "p": 1}
+
+            }
+        }
 }
 ```
 
-### 🥗SegDataloaderTrain
+### 🥗SegDataloaderTrain √
 
 [source](../core/modules/dataloaders/SegDataloader.py)
 
 **构造函数**
 
 ```
-def SegDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0)
-"""
-is_distributed : bool 是否是分布式
-batch_size : int batchsize大小
-num_workers : int 读取数据线程数
-dataset : DotMap 数据集配置
-seed : int 随机种子
-"""
+def SegDataloaderTrain(is_distributed=False, batch_size=None, num_workers=None, dataset=None, seed=0):
+    """
+    is_distributed : bool 是否是分布式
+    batch_size : int batchsize大小
+    num_workers : int 读取数据线程数
+    dataset : DotMap 数据集配置
+    seed : int 随机种子
+    """
 ```
 
 返回类型
@@ -283,7 +305,7 @@ return train_loader, max_iter
     }
 ```
 
-### 🌭SegDataloaderEval
+### 🌭SegDataloaderEval √
 
 [source](../core/modules/dataloaders/SegDataloader.py)
 
@@ -339,45 +361,124 @@ return val_loader, len(val_loader)
         }
 ```
 
-### MVTecDataset
+### 🦪MVTecDataset √
+
+[source](../core/modules/dataloaders/datasets/MVTecDataset.py)
+
+**构造函数**
 
 ```
-MVTecDataset(
-    data_dir=None,
-    preproc=None,
-    image_set="",
-    in_channels=1,
-    input_size=(224, 224),
-    cache=False,
-    image_suffix=".png",
-    mask_suffix=".png",
-    **kwargs
-)
+class MVTecDataset(Dataset):
+    def __init__(self,
+                 data_dir=None,
+                 preproc=None,
+                 image_set="",
+                 in_channels=1,
+                 cache=False,
+                 image_suffix=".png",
+                 mask_suffix=".png",
+                 **kwargs
+                 ):
+        """
+        异常检测数据集，（MVTecDataset类型）
+
+        data_dir:str  数据集文件夹路径，文件夹要求是
+            📂datasets 数据集名称
+              ┣ 📂 ground_truth  test测试文件夹对应的mask
+              ┃     ┣ 📂 defective_type_1    异常类别1 mask（0，255）
+              ┃     ┗ 📂 defective_type_2    异常类别2 mask
+              ┣ 📂 test  测试文件夹
+              ┃     ┣ 📂 defective_type_1    异常类别1 图片
+              ┃     ┣ 📂 defective_type_2    异常类别2 图片
+              ┃     ┗ 📂 good
+              ┗ 📂 train 训练文件夹
+              ┃     ┗ 📂 good
+
+        preproc:albumentations.Compose 对图片进行预处理
+        image_set:str "train.txt or val.txt or test.txt"； train.txt是训练，其余是测试
+        in_channels:int  输入图片的通道数，目前只支持1和3通道
+        cache:bool 是否对图片进行内存缓存
+        image_suffix:str 可接受的图片后缀
+        mask_suffix:str 可接受的图片后缀
+        """
 ```
 
-异常检测数据集，（MVTecDataset类型）
+**config.json**
 
-**1. 构造函数**
+```
+"dataset": {
+        "type": "MVTecDataset",
+        "kwargs": {
+            "data_dir": "/root/data/DAO/mvtec_anomaly_detection/bottle",
+            "image_set": "test.txt",
+            "in_channels": 3,
+            "cache": True,
+            "image_suffix": ".png",
+            "mask_suffix": ".png"
+        },
+        "transforms": {
+            "kwargs": {
+                "Resize": {"height": 224, "width": 224, "p": 1, "interpolation": 0},
+                "Normalize": {"mean": 0, "std": 1, "p": 1}
 
-- data_dir:str  数据集文件夹路径，文件夹要求是
-      📂datasets
-      ┗ 📂your_custom_dataset
-      ┣ 📂 ground_truth
-      ┃ ┣ 📂 defective_type_1
-      ┃ ┗ 📂 defective_type_2
-      ┣ 📂 test
-      ┃ ┣ 📂 defective_type_1
-      ┃ ┣ 📂 defective_type_2
-      ┃ ┗ 📂 good
-      ┗ 📂 train
-      ┃ ┗ 📂 good
-- preproc:albumentations.Compose 对图片进行预处理
-- image_set:str "train.txt or val.txt or test.txt"
-- in_channels:int  输入图片的通道数，目前只支持1和3通道
-- input_size:tuple 输入图片的HW
-- cache:bool 是否对图片进行内存缓存
-- image_suffix:str 可接受的图片后缀
-- mask_suffix:str 可接受的图片后缀
+
+            }
+        }
+    }
+```
+
+### 🍣AnomalyDataloader √
+
+[source](../core/modules/dataloaders/AnomalyDataloader.py)
+
+**构造函数**
+
+```
+class MVTecDataloader(DataLoader):
+    def __init__(self, dataset, batch_size=1, num_workers=2, shuffle=False):
+        dataset = Registers.datasets.get(dataset.type)(
+            preproc=get_transformer(dataset.transforms.kwargs), **dataset.kwargs)
+        super(MVTecDataloader, self).__init__(
+            dataset=dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            num_workers=num_workers
+        )
+```
+
+**config.json**
+
+```
+"dataloader": {
+		"type": "MVTecDataloader",
+        "dataset": {
+            "type": "MVTecDataset",
+            "kwargs": {
+                "data_dir": "/root/data/DAO/mvtec_anomaly_detection/bottle",
+                "image_set": "test.txt",
+                "in_channels": 3,
+                "cache": True,
+                "image_suffix": ".png",
+                "mask_suffix": ".png"
+            },
+            "transforms": {
+                "kwargs": {
+                    "Resize": {"height": 224, "width": 224, "p": 1, "interpolation": 0},
+                    "Normalize": {"mean": 0, "std": 1, "p": 1}
+
+                }
+            }
+        },
+        "kwargs": {
+            "batch_size": 1,
+            "num_workers": 2,
+            "shuffle": False
+        }
+
+    }
+```
+
+
 
 ## 2. models
 
@@ -906,5 +1007,16 @@ class ClsEvaluator:
 
 ## 7. trainer
 
-### 🥨ClsTrainer
+### 🥨Cls √
+
+[source](../core/trainers/trainerCls.py)
+
+- ClsTrainer：train方法， return 0；结果保存成文件
+- ClsEval：eval方法， return 0；结果保存成文件
+- ClsDemo：demo方法， return 0；结果保存成文件
+- ClsExport：export方法， return 0；结果保存成文件
+
+### 🍝Seg
+
+Trainer
 
