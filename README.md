@@ -185,7 +185,7 @@
 ```
 ### 2.3 调用流程
 
-![](resources/main.png)
+![](resources/files/main.png)
 
 #### 2.3.1 TrainVal过程
 
