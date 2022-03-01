@@ -1,5 +1,5 @@
 {
-    "name": "cls-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux",
+    "name": "cls-envs(gpu)-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader(screen)-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux",
     "type": "cls",
     "seed": 0,
 
@@ -67,9 +67,6 @@
                 "in_channels": 1,
                 "input_size": [224, 224],
                 "cache": false,
-                "train_ratio": 0.9,
-                "shuffle": true,
-                "sample_range": [2000, 3000],
                 "images_suffix": [".bmp"]
             },
             "transforms": {
@@ -115,9 +112,6 @@
                     "in_channels": 1,
                     "input_size": [224, 224],
                     "cache": false,
-                    "train_ratio": 0.9,
-                    "shuffle": true,
-                    "sample_range": [2000, 3000],
                     "images_suffix": [".bmp"]
                 },
                 "transforms": {

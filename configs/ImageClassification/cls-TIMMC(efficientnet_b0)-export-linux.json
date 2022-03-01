@@ -8,7 +8,7 @@
             "log_dir": "/root/code/DAO/saved",
             "log_per_iter": 10
         },
-        "ckpt": "/root/code/DAO/pretrained/cls/cls-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/01-14_09-39/best_ckpt.pth"
+        "ckpt": "/root/code/DAO/saved/cls-envs(gpu)-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader(screen)-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/02-28_19-29/best_ckpt.pth"
 
 },
     "model": {

@@ -1,5 +1,5 @@
 {
-    "name": "cls-TIMMC(efficientnet_b0)-ClsDataset-ClsEvaluator-eval-linux",
+    "name": "cls-TIMMC(efficientnet_b0)-ClsDataset(screen)-ClsEvaluator-eval-linux",
     "type": "cls",
     "seed": 0,
 
@@ -19,7 +19,7 @@
             "log_dir": "/root/code/DAO/saved",
             "log_per_iter": 10
         },
-        "ckpt": "/root/code/DAO/pretrained/cls/cls-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/01-14_09-39/best_ckpt.pth",
+        "ckpt": "/root/code/DAO/saved/cls-envs(gpu)-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader(screen)-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux/02-28_19-29/best_ckpt.pth",
         "resume": false
     },
     "model": {
@@ -50,9 +50,6 @@
                     "in_channels": 1,
                     "input_size": [224, 224],
                     "cache": false,
-                    "train_ratio": 0.9,
-                    "shuffle": true,
-                    "sample_range": [2000, 3000],
                     "images_suffix": [".bmp"]
                 },
                 "transforms": {
