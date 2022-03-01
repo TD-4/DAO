@@ -79,21 +79,21 @@ class UnetDecoder(nn.Module):
     ):
         super().__init__()
 
-        if n_blocks != len(decoder_channels):
+        if n_blocks != len(decoder_channels):   # decoder_channels:(256, 128, 64, 32, 16)
             raise ValueError(
                 "Model depth is {}, but you provide `decoder_channels` for {} blocks.".format(
                     n_blocks, len(decoder_channels)
                 )
             )
 
-        encoder_channels = encoder_channels[1:]  # remove first skip with same spatial resolution
-        encoder_channels = encoder_channels[::-1]  # reverse channels to start from head of encoder
+        encoder_channels = encoder_channels[1:]  # remove first skip with same spatial resolution, [64, 64, 128, 256, 512]
+        encoder_channels = encoder_channels[::-1]  # reverse channels to start from head of encoder, [512, 256, 128, 64, 64]
 
         # computing blocks input and output channels
         head_channels = encoder_channels[0]
-        in_channels = [head_channels] + list(decoder_channels[:-1])
-        skip_channels = list(encoder_channels[1:]) + [0]
-        out_channels = decoder_channels
+        in_channels = [head_channels] + list(decoder_channels[:-1])  # [512, 256, 128, 64, 32]
+        skip_channels = list(encoder_channels[1:]) + [0]    # [256, 128, 64, 64, 0]
+        out_channels = decoder_channels     # (256, 128, 64, 32, 16)
 
         if center:
             self.center = CenterBlock(

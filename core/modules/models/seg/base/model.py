@@ -3,6 +3,11 @@ from . import initialization as init
 
 
 class SegmentationModel(torch.nn.Module):
+    """
+    SegmentationModel是分割模型的基类，
+        共包含4组件，即：encoder（backbone）不在此处定义、decoder、segmentation_Head、classificationHead；
+        共包含3个函数，即：initialize初始化权重，forward，predict
+    """
     def initialize(self):
         init.initialize_decoder(self.decoder)
         init.initialize_head(self.segmentation_head)
