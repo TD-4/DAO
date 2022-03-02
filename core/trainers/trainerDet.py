@@ -56,6 +56,8 @@ class DetTrainer:
             self._after_epoch()
         self._after_train()
 
+        return 0, self.output_dir
+
     def _before_train(self):
         """
         1.Logger Setting

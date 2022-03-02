@@ -464,7 +464,7 @@ class SegDemo:
         for i, (image, img_p) in enumerate(results):
             shutil.copy(img_p, os.path.join(self.output_dir, "demo_result", os.path.basename(img_p)[:-4]+".jpg"))
             image.save(os.path.join(self.output_dir, "demo_result", os.path.basename(img_p)[:-4]+".png"))
-        return results
+        return 0, self.output_dir
 
 
 @Registers.trainers.register
@@ -504,4 +504,6 @@ class SegExport:
                           x,
                           onnx_path,
                           **self.exp.onnx.kwargs)
+
+        return 0, self.output_dir
 
