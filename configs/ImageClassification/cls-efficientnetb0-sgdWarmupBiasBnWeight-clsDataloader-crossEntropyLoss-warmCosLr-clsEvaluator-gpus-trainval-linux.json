@@ -1,5 +1,5 @@
 {
-    "name": "cls-envs(gpu)-TIMMC(efficientnet_b0)-sgd_warmup_bias_bn_weight-ClsDataloader(screen)-CrossEntropyLoss-warm_cos_lr-ClsEvaluator-trainval-linux",
+    "name": "cls-train",
     "type": "cls",
     "seed": 0,
 
@@ -34,15 +34,15 @@
     },
     "model": {
         "type": "TIMMC",
-        "summary_size": [1,224,224],
+        "summary_size": [1,512,512],
         "backbone": {
             "kwargs": {
-                "model_name":"efficientnet_b0",
+                "model_name":"resnet50",
                 "pretrained": true,
                 "checkpoint_path": "",
                 "exportable": true,
                 "in_chans": 1,
-                "num_classes": 38
+                "num_classes": 5
             }
         },
         "kwargs": {
@@ -62,10 +62,10 @@
         "dataset": {
             "type": "ClsDataset",
             "kwargs": {
-                "data_dir": "/root/data/DAO/screen",
+                "data_dir": "/root/data/DAO/linux",
                 "image_set": "train.txt",
                 "in_channels": 1,
-                "input_size": [224, 224],
+                "input_size": [512, 512],
                 "cache": false,
                 "images_suffix": [".bmp"]
             },
