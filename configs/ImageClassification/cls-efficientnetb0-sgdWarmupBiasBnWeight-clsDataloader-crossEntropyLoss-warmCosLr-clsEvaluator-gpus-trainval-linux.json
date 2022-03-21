@@ -16,7 +16,7 @@
     "trainer": {
         "type": "ClsTrainer",
         "log": {
-            "log_dir": "/root/code/DAO/saved",
+            "log_dir": "/root/data/AILogs/4AR6N-L546S-DQSM9-424ZM-N4DZ2",
             "log_per_iter": 10,
             "eval_interval": 1
         },
@@ -34,15 +34,15 @@
     },
     "model": {
         "type": "TIMMC",
-        "summary_size": [1,512,512],
+        "summary_size": [1,224,224],
         "backbone": {
             "kwargs": {
-                "model_name":"resnet50",
+                "model_name":"efficientnet_b0",
                 "pretrained": true,
                 "checkpoint_path": "",
                 "exportable": true,
                 "in_chans": 1,
-                "num_classes": 5
+                "num_classes": 38
             }
         },
         "kwargs": {
@@ -62,7 +62,7 @@
         "dataset": {
             "type": "ClsDataset",
             "kwargs": {
-                "data_dir": "/root/data/DAO/linux",
+                "data_dir": "/root/data/AIDatasets/ImageClassification/screen",
                 "image_set": "train.txt",
                 "in_channels": 1,
                 "input_size": [512, 512],
@@ -78,7 +78,7 @@
         },
         "kwargs": {
             "num_workers": 4,
-            "batch_size": 256
+            "batch_size": 128
         }
     },
     "loss": {
@@ -107,7 +107,7 @@
             "dataset": {
                 "type": "ClsDataset",
                 "kwargs": {
-                    "data_dir": "/root/data/DAO/screen",
+                    "data_dir": "/root/data/AIDatasets/ImageClassification/screen",
                     "image_set": "val.txt",
                     "in_channels": 1,
                     "input_size": [224, 224],
@@ -116,14 +116,13 @@
                 },
                 "transforms": {
                     "kwargs": {
-                        "histogram": {"p": 1},
                         "Normalize": {"mean": 0, "std": 1, "p": 1}
                     }
             }
             },
             "kwargs": {
                 "num_workers": 4,
-                "batch_size": 256
+                "batch_size": 128
             }
         },
         "kwargs": {
