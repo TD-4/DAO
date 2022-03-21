@@ -1,5 +1,5 @@
 {
-    "name": "efficientb0",
+    "name": "resnet101",
     "type": "cls",
     "seed": 0,
 
@@ -37,7 +37,7 @@
         "summary_size": [1,224,224],
         "backbone": {
             "kwargs": {
-                "model_name":"efficientnet_b0",
+                "model_name":"resnet101",
                 "pretrained": true,
                 "checkpoint_path": "",
                 "exportable": true,
@@ -62,7 +62,7 @@
         "dataset": {
             "type": "ClsDataset",
             "kwargs": {
-                "data_dir": "/root/data/AIDatasets/ImageClassification/PZ",
+                "data_dir": "/root/data/DAO/linux",
                 "image_set": "train.txt",
                 "in_channels": 1,
                 "input_size": [512, 512],
@@ -108,7 +108,7 @@
             "dataset": {
                 "type": "ClsDataset",
                 "kwargs": {
-                    "data_dir": "/root/data/AIDatasets/ImageClassification/PZ",
+                    "data_dir": "/root/data/DAO/linux",
                     "image_set": "val.txt",
                     "in_channels": 1,
                     "input_size": [512, 512],

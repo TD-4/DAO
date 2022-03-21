@@ -1,5 +1,5 @@
 {
-    "name": "efficientb0",
+    "name": "efficientb1",
     "type": "cls",
     "seed": 0,
 
@@ -37,7 +37,7 @@
         "summary_size": [1,224,224],
         "backbone": {
             "kwargs": {
-                "model_name":"efficientnet_b0",
+                "model_name":"efficientnet_b1",
                 "pretrained": true,
                 "checkpoint_path": "",
                 "exportable": true,
