@@ -1,6 +1,7 @@
 {
     "name": "resnet101",
     "type": "cls",
+    "fullName": "cls-resnet101-sgdWarmupBiasBnWeight-clsDataloader-crossEntropyLoss-warmCosLr-clsEvaluator-gpus-trainval-linux",
     "seed": 0,
 
     "envs": {
@@ -16,7 +17,7 @@
     "trainer": {
         "type": "ClsTrainer",
         "log": {
-            "log_dir": "/root/data/AILogs/4AR6N-L546S-DQSM9-424ZM-N4DZ2",
+            "log_dir": "/ai/data/AILogs/4AR6N-L546S-DQSM9-424ZM-N4DZ2/ImageClassification/resnet101/test",
             "log_per_iter": 10,
             "eval_interval": 1
         },
@@ -62,7 +63,7 @@
         "dataset": {
             "type": "ClsDataset",
             "kwargs": {
-                "data_dir": "/root/data/DAO/linux",
+                "data_dir": "/ai/data/AIDatasets/ImageClassification/4AR6N-L546S-DQSM9-424ZM-N4DZ2/PZ",
                 "image_set": "train.txt",
                 "in_channels": 1,
                 "input_size": [512, 512],
@@ -108,7 +109,7 @@
             "dataset": {
                 "type": "ClsDataset",
                 "kwargs": {
-                    "data_dir": "/root/data/DAO/linux",
+                    "data_dir": "/ai/data/AIDatasets/ImageClassification/4AR6N-L546S-DQSM9-424ZM-N4DZ2/PZ",
                     "image_set": "val.txt",
                     "in_channels": 1,
                     "input_size": [512, 512],

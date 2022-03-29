@@ -16,7 +16,7 @@
     "trainer": {
         "type": "ClsEval",
         "log": {
-            "log_dir": "/root/code/DAO/saved",
+            "log_dir": "/ai/data/AIDatasets/ImageClassification/PZ",
             "log_per_iter": 10
         },
         "ckpt": "/root/code/DAO/saved/train/03-15_14-38/best_ckpt.pth",
@@ -45,7 +45,7 @@
             "dataset": {
                 "type": "ClsDataset",
                 "kwargs": {
-                    "data_dir": "/root/data/DAO/linux",
+                    "data_dir": "/ai/data/AIDatasets/ImageClassification/PZ",
                     "image_set": "test.txt",
                     "in_channels": 1,
                     "input_size": [512, 512],

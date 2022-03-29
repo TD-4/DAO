@@ -1,13 +1,14 @@
 {
-    "name": "efficientb0",
+    "name": "train",
     "type": "cls",
+    "fullName": "cls-efficientnetb0-sgdWarmupBiasBnWeight-clsDataloader-crossEntropyLoss-warmCosLr-clsEvaluator-gpus-trainval-linux",
     "seed": 0,
 
     "envs": {
         "type": "linux",
         "gpus": {
             "dist_backend": "nccl",
-            "dist_url": null,
+            "dist_url":"tcp://10.1.130.111:803",
             "devices": 1,
             "num_machines": 1,
             "machine_rank": 0
@@ -16,14 +17,14 @@
     "trainer": {
         "type": "ClsTrainer",
         "log": {
-            "log_dir": "/root/data/AILogs/4AR6N-L546S-DQSM9-424ZM-N4DZ2",
+            "log_dir": "/ai/data/AILogs/4AR6N-L546S-DQSM9-424ZM-N4DZ2/ImageClassification/efficientb0/test",
             "log_per_iter": 10,
             "eval_interval": 1
         },
 
         "warmup_epochs": 5,
         "no_aug_epochs": 5,
-        "max_epochs": 200,
+        "max_epochs": 20,
 
         "ckpt": null,
         "resume": false,
@@ -62,7 +63,7 @@
         "dataset": {
             "type": "ClsDataset",
             "kwargs": {
-                "data_dir": "/root/data/AIDatasets/ImageClassification/PZ",
+                "data_dir": "/ai/data/AIDatasets/ImageClassification/4AR6N-L546S-DQSM9-424ZM-N4DZ2/PZ",
                 "image_set": "train.txt",
                 "in_channels": 1,
                 "input_size": [512, 512],
@@ -89,8 +90,7 @@
         "type": "CrossEntropyLoss",
         "kwargs": {
             "ignore_index": 255,
-            "weight": [
-                1, 1, 1, 1, 1],
+            "weight": [1, 1, 1, 1, 1],
             "reduction": "mean"
         }
     },
@@ -108,7 +108,7 @@
             "dataset": {
                 "type": "ClsDataset",
                 "kwargs": {
-                    "data_dir": "/root/data/AIDatasets/ImageClassification/PZ",
+                    "data_dir": "/ai/data/AIDatasets/ImageClassification/4AR6N-L546S-DQSM9-424ZM-N4DZ2/PZ",
                     "image_set": "val.txt",
                     "in_channels": 1,
                     "input_size": [512, 512],
@@ -128,7 +128,7 @@
         },
         "kwargs": {
             "num_classes": 5,
-            "target_layer": "layer4"
+            "target_layer": "conv_head"
         }
 
     }
