@@ -12,27 +12,18 @@ import sys
 from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # 添加 core库 到 sys.path 中
-from core.tools import TrainVal, Eval, Demo, Export
+from core import DAO, DAODict
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("AI TrainVal Parser")
     parser.add_argument("-c", "--exp_file", default=None, type=str, help="please input your experiment description file")
-    parser.add_argument("-m", "--cus_file", default="/root/code/DAO/configs/Modules/custom_modules.json", type=str, help="please input your modules description file")
+    parser.add_argument("-m", "--cus_file", default="/ai/AI/server/DAO/configs/Modules/custom_modules.json", type=str, help="please input your modules description file")
 
     exp = json.load(open(parser.parse_args().exp_file))     # load config.json
     custom_modules = json.load(open(parser.parse_args().cus_file))  # load modules.json
 
-    if parser.parse_args().exp_file[:-5].split('-')[-2] == "trainval":
-        TrainVal(config=exp, custom_modules=custom_modules)
-    elif parser.parse_args().exp_file[:-5].split('-')[-2] == "eval":
-        Eval(config=exp, custom_modules=custom_modules)
-    elif parser.parse_args().exp_file[:-5].split('-')[-2] == "demo":
-        Demo(config=exp, custom_modules=custom_modules)
-    elif parser.parse_args().exp_file[:-5].split('-')[-2] == "export":
-        Export(config=exp, custom_modules=custom_modules)
-    else:
-        logger.error("this type {} is not supported, now supported trainval, eval, demo, export".format(
-            parser.parse_args().exp_file[:-5].split('-')[-2])
-        )
+    DAO(parser.parse_args().exp_file, parser.parse_args().cus_file)  # test DAO
+    # DAODict(exp, custom_modules)  # test DAODict
+
 
